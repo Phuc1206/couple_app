@@ -1,5 +1,5 @@
 import ChatBox from "../../components/ui/ChatBox";
 
-export default function Home() {
+export default function Chat() {
 	return <ChatBox />;
 }

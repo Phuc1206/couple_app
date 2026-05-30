@@ -1,36 +1,83 @@
-import { app as n, BrowserWindow as i } from "electron";
-import { fileURLToPath as c } from "node:url";
-import o from "node:path";
-const t = o.dirname(c(import.meta.url));
-process.env.APP_ROOT = o.join(t, "..");
-const s = process.env.VITE_DEV_SERVER_URL, R = o.join(process.env.APP_ROOT, "dist-electron"), r = o.join(process.env.APP_ROOT, "dist");
-process.env.VITE_PUBLIC = s ? o.join(process.env.APP_ROOT, "public") : r;
-let e;
-function l() {
-  e = new i({
-    // width: 400,
-    // height: 700,
-    // transparent: true,
-    // frame: false,
-    // alwaysOnTop: true,
-    // vibrancy: "sidebar",
-    icon: o.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
+import { app, nativeTheme, BrowserWindow, Notification } from "electron";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import path from "node:path";
+const __dirname$1 = path.dirname(fileURLToPath(import.meta.url));
+process.env.APP_ROOT = path.join(__dirname$1, "..");
+const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
+const MAIN_DIST = path.join(process.env.APP_ROOT, "dist-electron");
+const RENDERER_DIST = path.join(process.env.APP_ROOT, "dist");
+process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, "public") : RENDERER_DIST;
+let win = null;
+function createWindow() {
+  win = new BrowserWindow({
+    width: 380,
+    height: 720,
+    minWidth: 340,
+    minHeight: 600,
+    transparent: true,
+    frame: false,
+    hasShadow: false,
+    vibrancy: "sidebar",
+    visualEffectState: "active",
+    titleBarStyle: "hiddenInset",
+    trafficLightPosition: {
+      x: 16,
+      y: 16
+    },
+    backgroundColor: "#00000000",
+    icon: path.join(process.env.VITE_PUBLIC, "love-letter.png"),
     webPreferences: {
-      preload: o.join(t, "preload.mjs")
+      preload: path.join(__dirname$1, "preload.mjs"),
+      contextIsolation: true,
+      nodeIntegration: false
     }
-  }), e.webContents.on("did-finish-load", () => {
-    e == null || e.webContents.send("main-process-message", (/* @__PURE__ */ new Date()).toLocaleString());
-  }), s ? e.loadURL(s) : e.loadFile(o.join(r, "index.html"));
+  });
+  if (VITE_DEV_SERVER_URL) {
+    win.webContents.openDevTools();
+    win.loadURL(VITE_DEV_SERVER_URL);
+  } else {
+    const indexUrl = pathToFileURL(path.join(RENDERER_DIST, "index.html")).href;
+    win.loadURL(indexUrl);
+  }
+  win.webContents.on("did-finish-load", () => {
+    win == null ? void 0 : win.webContents.send("main-process-message", (/* @__PURE__ */ new Date()).toLocaleString());
+  });
+  win.on("closed", () => {
+    win = null;
+  });
 }
-n.on("window-all-closed", () => {
-  process.platform !== "darwin" && (n.quit(), e = null);
+function showNotification(body) {
+  if (!Notification.isSupported()) return;
+  new Notification({
+    title: "My love",
+    icon: path.join(process.env.VITE_PUBLIC, "love-letter.png"),
+    body,
+    silent: false
+  }).show();
+}
+app.whenReady().then(() => {
+  nativeTheme.themeSource = "dark";
+  app.setLoginItemSettings({
+    openAtLogin: true
+  });
+  app.dock.setIcon(path.join(process.env.APP_ROOT, "public/love-letter.png"));
+  createWindow();
+  setTimeout(() => {
+    showNotification("Connected successfully ❤️");
+  }, 1500);
 });
-n.on("activate", () => {
-  i.getAllWindows().length === 0 && l();
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
+    app.quit();
+  }
 });
-n.whenReady().then(l);
+app.on("activate", () => {
+  if (BrowserWindow.getAllWindows().length === 0) {
+    createWindow();
+  }
+});
 export {
-  R as MAIN_DIST,
-  r as RENDERER_DIST,
-  s as VITE_DEV_SERVER_URL
+  MAIN_DIST,
+  RENDERER_DIST,
+  VITE_DEV_SERVER_URL
 };

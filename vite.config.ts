@@ -9,6 +9,7 @@ export default defineConfig({
 	plugins: [
 		react(),
 		tailwindcss(),
+
 		electron({
 			main: {
 				// Shortcut of `build.lib.entry`.
@@ -29,4 +30,7 @@ export default defineConfig({
 					: {},
 		}),
 	],
+	build: {
+		sourcemap: false,
+	},
 });
