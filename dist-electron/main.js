@@ -1,22 +1,20 @@
-import { app, nativeTheme, BrowserWindow, Notification } from "electron";
-import { fileURLToPath, pathToFileURL } from "node:url";
-import path from "node:path";
-const __dirname$1 = path.dirname(fileURLToPath(import.meta.url));
-process.env.APP_ROOT = path.join(__dirname$1, "..");
-const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
-const MAIN_DIST = path.join(process.env.APP_ROOT, "dist-electron");
-const RENDERER_DIST = path.join(process.env.APP_ROOT, "dist");
-process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, "public") : RENDERER_DIST;
-let win = null;
-function createWindow() {
-  win = new BrowserWindow({
+import { app as n, nativeTheme as d, BrowserWindow as r, Notification as s } from "electron";
+import { fileURLToPath as p, pathToFileURL as f } from "node:url";
+import o from "node:path";
+const a = o.dirname(p(import.meta.url));
+process.env.APP_ROOT = o.join(a, "..");
+const i = process.env.VITE_DEV_SERVER_URL, u = o.join(process.env.APP_ROOT, "dist-electron"), l = o.join(process.env.APP_ROOT, "dist");
+process.env.VITE_PUBLIC = i ? o.join(process.env.APP_ROOT, "public") : l;
+let e = null;
+function c() {
+  if (e = new r({
     width: 380,
     height: 720,
     minWidth: 340,
     minHeight: 600,
-    transparent: true,
-    frame: false,
-    hasShadow: false,
+    transparent: !0,
+    frame: !1,
+    hasShadow: !1,
     vibrancy: "sidebar",
     visualEffectState: "active",
     titleBarStyle: "hiddenInset",
@@ -25,59 +23,49 @@ function createWindow() {
       y: 16
     },
     backgroundColor: "#00000000",
-    icon: path.join(process.env.VITE_PUBLIC, "love-letter.png"),
+    icon: o.join(process.env.VITE_PUBLIC, "love-letter.png"),
     webPreferences: {
-      preload: path.join(__dirname$1, "preload.mjs"),
-      contextIsolation: true,
-      nodeIntegration: false
+      preload: o.join(a, "preload.mjs"),
+      contextIsolation: !0,
+      nodeIntegration: !1
     }
-  });
-  if (VITE_DEV_SERVER_URL) {
-    win.webContents.openDevTools();
-    win.loadURL(VITE_DEV_SERVER_URL);
-  } else {
-    const indexUrl = pathToFileURL(path.join(RENDERER_DIST, "index.html")).href;
-    win.loadURL(indexUrl);
+  }), i)
+    e.webContents.openDevTools(), e.loadURL(i);
+  else {
+    const t = f(o.join(l, "index.html")).href;
+    e.loadURL(t);
   }
-  win.webContents.on("did-finish-load", () => {
-    win == null ? void 0 : win.webContents.send("main-process-message", (/* @__PURE__ */ new Date()).toLocaleString());
-  });
-  win.on("closed", () => {
-    win = null;
+  e.webContents.on("did-finish-load", () => {
+    e == null || e.webContents.send("main-process-message", (/* @__PURE__ */ new Date()).toLocaleString());
+  }), e.on("closed", () => {
+    e = null;
   });
 }
-function showNotification(body) {
-  if (!Notification.isSupported()) return;
-  new Notification({
+function m(t) {
+  s.isSupported() && new s({
     title: "My love",
-    icon: path.join(process.env.VITE_PUBLIC, "love-letter.png"),
-    body,
-    silent: false
+    icon: o.join(process.env.VITE_PUBLIC, "love-letter.png"),
+    body: t,
+    silent: !1
   }).show();
 }
-app.whenReady().then(() => {
-  nativeTheme.themeSource = "dark";
-  app.setLoginItemSettings({
-    openAtLogin: true
+n.whenReady().then(() => {
+  d.themeSource = "dark", n.setLoginItemSettings({
+    openAtLogin: !0
   });
-  app.dock.setIcon(path.join(process.env.APP_ROOT, "public/love-letter.png"));
-  createWindow();
-  setTimeout(() => {
-    showNotification("Connected successfully ❤️");
+  const t = o.join(process.env.VITE_PUBLIC, "love-letter.png");
+  process.platform === "darwin" && n.dock.setIcon(t), c(), setTimeout(() => {
+    m("Connected successfully ❤️");
   }, 1500);
 });
-app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
-    app.quit();
-  }
+n.on("window-all-closed", () => {
+  process.platform !== "darwin" && n.quit();
 });
-app.on("activate", () => {
-  if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow();
-  }
+n.on("activate", () => {
+  r.getAllWindows().length === 0 && c();
 });
 export {
-  MAIN_DIST,
-  RENDERER_DIST,
-  VITE_DEV_SERVER_URL
+  u as MAIN_DIST,
+  l as RENDERER_DIST,
+  i as VITE_DEV_SERVER_URL
 };

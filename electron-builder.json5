@@ -10,16 +10,16 @@
 	files: [
 		"dist/**/*",
 		"dist-electron/**/*",
+		"!node_modules/**/*",
 		"!**/*.map",
 		"!**/*.md",
 		"!**/*.log",
 	],
-	asar: true,
 	npmRebuild: false,
 	mac: {
 		target: ["dmg"],
 		artifactName: "${productName}.${ext}",
-		icon: "public/love-letter.png",
+		icon: "public/love-letter.icns",
 	},
 	win: {
 		target: [

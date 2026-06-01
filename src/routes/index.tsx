@@ -5,44 +5,46 @@ import FloatingWindow from "../layout/FloatingWindow";
 import Home from "../pages/Home";
 import Chat from "../pages/Chat";
 import Memories from "../pages/Memories";
-import Map from "../pages/Map";
+
 import Error from "../pages/Error";
+import Todo from "../pages/Todo";
+import Profile from "../pages/Profile";
 
 export const router = createHashRouter([
-	{
-		path: "/",
+  {
+    path: "/",
 
-		element: <FloatingWindow />,
-		errorElement: <Error />,
+    element: <FloatingWindow />,
+    errorElement: <Error />,
 
-		children: [
-			{
-				index: true,
+    children: [
+      {
+        index: true,
 
-				element: <Home />,
-			},
+        element: <Home />
+      },
 
-			{
-				path: "chat",
+      {
+        path: "chat",
 
-				element: <Chat />,
-			},
-			{
-				path: "memories",
-				element: <Memories />,
-			},
-			{
-				path: "map",
-				element: <Map />,
-			},
-			{
-				path: "profile",
-				element: <div>Profile</div>,
-			},
-			{
-				path: "*",
-				element: <div>404</div>,
-			},
-		],
-	},
+        element: <Chat />
+      },
+      {
+        path: "memories",
+        element: <Memories />
+      },
+      {
+        path: "todo",
+        element: <Todo />
+      },
+      {
+        path: "profile",
+        element: <Profile />
+      },
+      {
+        path: "*",
+        element: <div>404</div>
+      }
+    ]
+  }
 ]);

@@ -1,15 +1,32 @@
-import { doc, onSnapshot, setDoc } from "firebase/firestore";
+import { db } from "./config"; // File cấu hình firebase của bạn
+import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp } from "firebase/firestore";
 
-import { db } from "./config";
+export interface IMessage {
+  id?: string;
+  sender: "Phuc" | "Linh";
+  content: string;
+  timestamp: { seconds: number; nanoseconds: number } | null;
+}
 
-export const listenMessage = (callback: (text: string) => void) => {
-	return onSnapshot(doc(db, "shared", "message"), (snap) => {
-		callback(snap.data()?.text || "");
-	});
+// Lắng nghe danh sách tin nhắn theo thời gian thực
+export const listenMessages = (callback: (messages: IMessage[]) => void) => {
+  const q = query(collection(db, "chats"), orderBy("timestamp", "asc"));
+
+  return onSnapshot(q, (snapshot) => {
+    const messages: IMessage[] = [];
+    snapshot.forEach((doc) => {
+      messages.push({ id: doc.id, ...doc.data() } as IMessage);
+    });
+    callback(messages);
+  });
 };
 
-export const updateMessage = async (text: string) => {
-	await setDoc(doc(db, "shared", "message"), {
-		text,
-	});
+// Hàm gửi tin nhắn mới
+export const sendMessageToFirebase = async (sender: "Phuc" | "Linh", content: string) => {
+  if (!content.trim()) return;
+  await addDoc(collection(db, "chats"), {
+    sender,
+    content,
+    timestamp: serverTimestamp()
+  });
 };

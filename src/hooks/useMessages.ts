@@ -1,54 +1,36 @@
 import { useEffect, useRef, useState } from "react";
-
-import { listenMessage, updateMessage } from "../firebase/message.service";
+import { listenMessages, sendMessageToFirebase, IMessage } from "../firebase/message.service";
 import soundUrl from "../assets/sounds/message.mp3";
-export const useMessages = () => {
-	const [text, setText] = useState("");
 
-	const firstLoad = useRef(true);
+export const useMessages = (currentUsers: "Phuc" | "Linh") => {
+  const [messages, setMessages] = useState<IMessage[]>([]);
+  const firstLoad = useRef(true);
 
-	// đánh dấu message do mình gửi
-	const isSending = useRef(false);
+  useEffect(() => {
+    const unsub = listenMessages((list) => {
+      setMessages(list);
 
-	useEffect(() => {
-		const unsub = listenMessage((newText) => {
-			setText(newText);
+      // Phát âm thanh nếu có tin nhắn mới từ đối phương
+      if (!firstLoad.current && list.length > 0) {
+        const lastMsg = list[list.length - 1];
+        if (lastMsg.sender !== currentUsers) {
+          const audio = new Audio(soundUrl);
+          audio.volume = 0.5;
+          audio.play().catch(() => console.log("Audio blocked"));
+        }
+      }
+      firstLoad.current = false;
+    });
 
-			// ignore lần load đầu
-			if (firstLoad.current) {
-				firstLoad.current = false;
+    return () => unsub();
+  }, [currentUsers]);
 
-				return;
-			}
+  const sendMessage = async (value: string) => {
+    await sendMessageToFirebase(currentUsers, value);
+  };
 
-			// ignore sound do chính mình gửi
-			if (isSending.current) {
-				isSending.current = false;
-
-				return;
-			}
-
-			const audio = new Audio(soundUrl);
-
-			audio.volume = 0.5;
-
-			audio.play().catch(() => {
-				console.log("Audio blocked");
-			});
-		});
-
-		return () => unsub();
-	}, []);
-
-	const sendMessage = async (value: string) => {
-		// đánh dấu mình đang gửi
-		isSending.current = true;
-
-		await updateMessage(value);
-	};
-
-	return {
-		text,
-		sendMessage,
-	};
+  return {
+    messages,
+    sendMessage
+  };
 };
