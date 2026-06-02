@@ -19,7 +19,7 @@ export const saveTodayDiary = async (user: "Phuc" | "Linh", data: { mood: string
   const todayStr = getTodayStr();
 
   // 🚀 ĐỔI VỊ TRÍ: "diary_shared" đứng trước (làm tên Subcollection), todayStr đứng sau (làm Document ID)
-  const docRef = doc(db, "app_data", "homepage_data", "diary_shared", todayStr);
+  const docRef = doc(db, "app_data", "homepage_shared", "diary_shared", todayStr);
 
   // Bỏ bớt bước getDoc check existingDoc để app chạy nhanh hơn, { merge: true } của Firestore lo hết rồi nha!
   await setDoc(
@@ -39,7 +39,7 @@ export const getTodayDiary = async (user: "Phuc" | "Linh"): Promise<{ mood: stri
   const todayStr = getTodayStr();
 
   // 🚀 Đồng bộ lại đường dẫn giống hàm lưu ở trên
-  const docRef = doc(db, "app_data", "homepage_data", "diary_shared", todayStr);
+  const docRef = doc(db, "app_data", "homepage_shared", "diary_shared", todayStr);
   const snapshot = await getDoc(docRef);
 
   if (snapshot.exists()) {
@@ -58,7 +58,7 @@ export interface IDiaryTimelineItem {
 // 🚀 HÀM LẤY TOÀN BỘ NHẬT KÝ TỪ APP_DATA (Xếp ngày mới nhất lên đầu)
 export const getAllDiaries = async (): Promise<IDiaryTimelineItem[]> => {
   // Trỏ đúng vào đường dẫn Subcollection con nằm trong app_data
-  const diaryCollection = collection(db, "app_data", "homepage_data", "diary_shared");
+  const diaryCollection = collection(db, "app_data", "homepage_shared", "diary_shared");
 
   // Sắp xếp theo ID của document (ngày YYYY-MM-DD) giảm dần để ngày mới nhất nằm trên cùng
   const snapshot = await getDocs(diaryCollection);

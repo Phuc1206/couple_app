@@ -1,10 +1,10 @@
-import { app as n, nativeTheme as d, BrowserWindow as r, Notification as s } from "electron";
-import { fileURLToPath as p, pathToFileURL as f } from "node:url";
-import o from "node:path";
-const a = o.dirname(p(import.meta.url));
-process.env.APP_ROOT = o.join(a, "..");
-const i = process.env.VITE_DEV_SERVER_URL, u = o.join(process.env.APP_ROOT, "dist-electron"), l = o.join(process.env.APP_ROOT, "dist");
-process.env.VITE_PUBLIC = i ? o.join(process.env.APP_ROOT, "public") : l;
+import { ipcMain as d, Notification as s, app as o, nativeTheme as f, BrowserWindow as r } from "electron";
+import { fileURLToPath as h, pathToFileURL as m } from "node:url";
+import n from "node:path";
+const a = n.dirname(h(import.meta.url));
+process.env.APP_ROOT = n.join(a, "..");
+const i = process.env.VITE_DEV_SERVER_URL, w = n.join(process.env.APP_ROOT, "dist-electron"), l = n.join(process.env.APP_ROOT, "dist");
+process.env.VITE_PUBLIC = i ? n.join(process.env.APP_ROOT, "public") : l;
 let e = null;
 function c() {
   if (e = new r({
@@ -23,16 +23,16 @@ function c() {
       y: 16
     },
     backgroundColor: "#00000000",
-    icon: o.join(process.env.VITE_PUBLIC, "love-letter.png"),
+    icon: n.join(process.env.VITE_PUBLIC, "love-letter.png"),
     webPreferences: {
-      preload: o.join(a, "preload.mjs"),
+      preload: n.join(a, "preload.mjs"),
       contextIsolation: !0,
       nodeIntegration: !1
     }
   }), i)
     e.webContents.openDevTools(), e.loadURL(i);
   else {
-    const t = f(o.join(l, "index.html")).href;
+    const t = m(n.join(l, "index.html")).href;
     e.loadURL(t);
   }
   e.webContents.on("did-finish-load", () => {
@@ -41,31 +41,29 @@ function c() {
     e = null;
   });
 }
-function m(t) {
+d.on("push-love-notification", (t, p) => {
   s.isSupported() && new s({
-    title: "My love",
-    icon: o.join(process.env.VITE_PUBLIC, "love-letter.png"),
-    body: t,
+    title: "Cục cưng nhắn gửi 💖",
+    icon: n.join(process.env.VITE_PUBLIC, "love-letter.png"),
+    body: p,
     silent: !1
   }).show();
-}
-n.whenReady().then(() => {
-  d.themeSource = "dark", n.setLoginItemSettings({
+});
+o.whenReady().then(() => {
+  f.themeSource = "dark", o.setLoginItemSettings({
     openAtLogin: !0
   });
-  const t = o.join(process.env.VITE_PUBLIC, "love-letter.png");
-  process.platform === "darwin" && n.dock.setIcon(t), c(), setTimeout(() => {
-    m("Connected successfully ❤️");
-  }, 1500);
+  const t = n.join(process.env.VITE_PUBLIC, "love-letter.png");
+  process.platform === "darwin" && o.dock.setIcon(t), c();
 });
-n.on("window-all-closed", () => {
-  process.platform !== "darwin" && n.quit();
+o.on("window-all-closed", () => {
+  process.platform !== "darwin" && o.quit();
 });
-n.on("activate", () => {
+o.on("activate", () => {
   r.getAllWindows().length === 0 && c();
 });
 export {
-  u as MAIN_DIST,
+  w as MAIN_DIST,
   l as RENDERER_DIST,
   i as VITE_DEV_SERVER_URL
 };

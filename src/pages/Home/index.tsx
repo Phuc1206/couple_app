@@ -4,10 +4,14 @@ import { useUserStore } from "../../store/userStore";
 import { listenTodos, ITodo } from "../../firebase/todo.service";
 import { listenHomeData, updateWidgetText, updateMyMood, updateSpecialDays, IHomeData, ISpecialDay } from "../../firebase/home.service";
 import { calculateLoveDays, calculateLoveTimeDetailed, getCountdown } from "../../utils/dateUtils";
-import { Heart, CheckCircle2, Sparkles, Smile, Cake, Plane, CalendarDays, Plus, X } from "lucide-react";
+import { Heart, CheckCircle2, Sparkles, Smile, Cake, Plane, CalendarDays, Plus, X, BookOpen } from "lucide-react";
 import { getTodayDiary, saveTodayDiary } from "../../firebase/diary.service";
+import { doc, onSnapshot } from "firebase/firestore";
+import { db } from "../../firebase/config";
+import { useNavigate } from "react-router-dom";
 
 export default function Home() {
+  const navigate = useNavigate();
   const currentUser = useUserStore((state) => state.currentUser);
   const partner: "Phuc" | "Linh" = currentUser === "Phuc" ? "Linh" : "Phuc";
 
@@ -36,6 +40,11 @@ export default function Home() {
   // 🚀 STATE QUẢN LÝ MENU CHỌN TÂM TRẠNG
   const [isMoodOpen, setIsMoodOpen] = useState(false);
   const moodMenuRef = useRef<HTMLDivElement>(null);
+
+  // 🚀 MỐC QUẢN LÝ SO SÁNH ĐỂ BẮN THÔNG BÁO REALTIME
+  const prevWidgetText = useRef<string | null>(null);
+  const prevSpecialDaysLength = useRef<number | null>(null);
+  const prevDiaryNote = useRef<string | null>(null);
 
   // Danh sách các tâm trạng siêu dễ thương để chọn
   const moodList = [
@@ -66,6 +75,7 @@ export default function Home() {
 
     return () => clearInterval(timer);
   }, [viewMode, anniversaryDate]);
+
   // Tự động load lại xem hôm nay mình đã viết nhật ký chưa
   useEffect(() => {
     const loadDiary = async () => {
@@ -78,15 +88,17 @@ export default function Home() {
     };
     loadDiary();
   }, [currentUser]);
+
   const handleSaveDiary = async () => {
     await saveTodayDiary(currentUser, {
-      mood: myStatus?.mood || "🥰 Bình thường", // Lấy luôn cái tâm trạng Phúc vừa chọn ở trên
+      mood: myStatus?.mood || "🥰 Bình thường",
       note: diaryNote,
       whatILove: diaryLove
     });
     setIsDiarySaved(true);
     alert("Đã lưu lại khoảnh khắc hôm nay! ❤️");
   };
+
   useEffect(() => {
     const unsubTodos = listenTodos((data) => setTodos(data));
     const unsubHome = listenHomeData((data) => {
@@ -98,6 +110,82 @@ export default function Home() {
       unsubHome();
     };
   }, []);
+
+  // 🚀 REALTIME WATCHER: PHÁT HIỆN ĐỐI PHƯƠNG THAY ĐỔI DỮ LIỆU ĐỂ BẮN THÔNG BÁO ELECTRON
+  useEffect(() => {
+    // 1. Theo dõi Góc nhắn gửi & Mốc thời gian mong đợi
+    const homeDocRef = doc(db, "app_data", "homepage_shared");
+    const unsubscribeHome = onSnapshot(homeDocRef, (snapshot) => {
+      if (!snapshot.exists()) return;
+      const data = snapshot.data();
+
+      // Nạp mốc dữ liệu ban đầu khi mở ứng dụng
+      if (prevWidgetText.current === null) {
+        prevWidgetText.current = data.widgetText || "";
+        prevSpecialDaysLength.current = data.specialDays?.length || 0;
+        return;
+      }
+
+      // Nếu người thực hiện chỉnh sửa dữ liệu chính là đối phương (partner)
+      if (data.widgetUpdatedBy === partner) {
+        // Kiểm tra xem lời nhắn gửi ngọt ngào có bị thay đổi không
+        if (data.widgetText !== prevWidgetText.current) {
+          (window as any).ipcRenderer?.send(
+            "push-love-notification",
+            `${partner === "Phuc" ? "Phúc" : "Linh"} vừa gửi lời nhắn mới: "${data.widgetText}" 💬`
+          );
+          prevWidgetText.current = data.widgetText;
+        }
+
+        // Kiểm tra xem có thêm mốc ngày đặc biệt mới không
+        const currentDaysLength = data.specialDays?.length || 0;
+        const previousDaysLength = prevSpecialDaysLength.current ?? 0;
+        if (currentDaysLength !== previousDaysLength) {
+          if (currentDaysLength > previousDaysLength) {
+            (window as any).ipcRenderer?.send(
+              "push-love-notification",
+              `${partner === "Phuc" ? "Phúc" : "Linh"} vừa tạo một mốc thời gian mong đợi mới đó! ✨`
+            );
+          }
+          prevSpecialDaysLength.current = currentDaysLength;
+        }
+      }
+    });
+
+    // 2. Theo dõi Nhật ký hôm nay độc lập
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    const diaryDocRef = doc(db, "app_data", "homepage_shared", "diary_shared", todayStr);
+
+    const unsubscribeDiary = onSnapshot(diaryDocRef, (snapshot) => {
+      if (!snapshot.exists()) return;
+      const data = snapshot.data();
+
+      // Nhận diện vùng dữ liệu của đối phương
+      const partnerDiary = partner === "Phuc" ? data.phucData : data.linhData;
+      if (!partnerDiary) return;
+
+      // Nạp mốc dữ liệu ban đầu
+      if (prevDiaryNote.current === null) {
+        prevDiaryNote.current = partnerDiary.note || "";
+        return;
+      }
+
+      // Nếu nội dung nhật ký của đối phương thực sự thay đổi khác mốc cũ
+      if (partnerDiary.note !== prevDiaryNote.current) {
+        (window as any).ipcRenderer?.send(
+          "push-love-notification",
+          `${partner === "Phuc" ? "Phúc" : "Linh"} vừa ghi nhật ký hôm nay: "${partnerDiary.note}" 📖`
+        );
+        prevDiaryNote.current = partnerDiary.note;
+      }
+    });
+
+    return () => {
+      unsubscribeHome();
+      unsubscribeDiary();
+    };
+  }, [currentUser, partner]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -123,7 +211,7 @@ export default function Home() {
 
   const handleSelectMood = async (selectedMood: string) => {
     await updateMyMood(currentUser, selectedMood);
-    setIsMoodOpen(false); // Chọn xong tự đóng menu
+    setIsMoodOpen(false);
   };
 
   const getDayConfig = (type: "anniversary" | "birthday" | "valentine" | "travel") => {
@@ -170,7 +258,6 @@ export default function Home() {
 
   return (
     <div className="relative flex h-[500px] w-[340px] items-center justify-center">
-      {/* NỘI DUNG CHÍNH CỦA HOME */}
       <div className="flex h-full min-h-0 w-full scrollbar-none flex-col space-y-4 overflow-y-auto pr-1 select-none">
         {/* 1. BỘ ĐẾM NGÀY YÊU NHAU */}
         <button
@@ -211,9 +298,8 @@ export default function Home() {
           </span>
         </button>
 
-        {/* 2. TRẠNG THÁI ĐỐI PHƯƠNG & BẢN THÂN (CÓ MENU CHỌN TÂM TRẠNG) */}
+        {/* 2. TRẠNG THÁI ĐỐI PHƯƠNG & BẢN THÂN */}
         <div className="relative grid grid-cols-2 gap-3">
-          {/* Ô hiển thị trạng thái của đối phương */}
           <div className="flex flex-col rounded-2xl border border-white/5 bg-white/5 p-3">
             <div className="flex items-center gap-2">
               <div
@@ -224,7 +310,6 @@ export default function Home() {
             <span className="mt-1.5 truncate text-[13px] font-semibold text-pink-300">{partnerStatus?.mood || "✨ Đang yêu"}</span>
           </div>
 
-          {/* Ô chọn tâm trạng của bản thân */}
           <div className="relative" ref={moodMenuRef}>
             <button
               onClick={() => setIsMoodOpen(!isMoodOpen)}
@@ -239,7 +324,6 @@ export default function Home() {
               <span className="mt-1.5 truncate text-[13px] font-semibold text-amber-200">{myStatus?.mood || "🥰 Đặt trạng thái"}</span>
             </button>
 
-            {/* 🚀 DROP-DOWN MENU CHỌN TÂM TRẠNG CUSTOM GLASSMORPHISM */}
             {isMoodOpen && (
               <div className="animate-fade-in absolute bottom-full left-0 z-40 mb-2 max-h-[170px] w-[155px] scrollbar-none overflow-y-auto rounded-xl border border-white/10 bg-[#160c0ebd]/95 p-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.6)] backdrop-blur-xl">
                 <div className="mb-1 border-b border-white/5 px-2 py-1 text-[9px] font-bold tracking-wider text-white/30 uppercase">
@@ -384,14 +468,23 @@ export default function Home() {
             )}
           </div>
         </div>
-        {/* 🚀 6. WIDGET NHẬT KÝ NHANH HÔM NAY */}
+
+        {/* 6. WIDGET NHẬT KÝ NHANH HÔM NAY */}
         <div className="flex flex-col rounded-2xl border border-white/5 bg-gradient-to-br from-amber-500/[0.03] to-pink-500/[0.03] p-4 shadow-md">
           <div className="flex items-center justify-between border-b border-white/5 pb-2">
             <div className="flex items-center gap-1.5 text-[11px] font-semibold text-white/40">
               <Sparkles size={12} className="text-amber-300" />
               <span>Nhật ký khoảnh khắc hôm nay 📖</span>
             </div>
-            {isDiarySaved && <span className="rounded bg-green-500/10 px-1.5 py-0.5 text-[9px] font-bold text-green-400">Đã ghi sổ</span>}
+
+            {/* 🚀 NÚT CHUYỂN TAB XEM LẠI SỔ KỶ NIỆM TIMELINE */}
+            <button
+              onClick={() => navigate("/diary")}
+              className="flex items-center gap-1 rounded-md bg-pink-500/10 px-2 py-0.5 text-[10px] font-bold text-pink-400 transition-all hover:bg-pink-500/20 active:scale-95"
+            >
+              <BookOpen size={10} />
+              <span>Xem sổ 📖</span>
+            </button>
           </div>
 
           <div className="mt-3 space-y-2.5">

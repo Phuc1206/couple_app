@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Notification, nativeTheme } from "electron";
+import { app, BrowserWindow, Notification, nativeTheme, ipcMain } from "electron";
 
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -90,19 +90,16 @@ function createWindow() {
 /* -------------------------------- */
 /* NOTIFICATION */
 /* -------------------------------- */
-
-function showNotification(body: string) {
+ipcMain.on("push-love-notification", (_event, text: string) => {
   if (!Notification.isSupported()) return;
 
   new Notification({
-    title: "My love",
+    title: "Cục cưng nhắn gửi 💖",
     icon: path.join(process.env.VITE_PUBLIC!, "love-letter.png"),
-    body,
-
+    body: text,
     silent: false
   }).show();
-  // shell.beep();
-}
+});
 
 /* -------------------------------- */
 /* APP EVENTS */
@@ -125,14 +122,7 @@ app.whenReady().then(() => {
     app.dock.setIcon(imagePath);
   }
   /* CREATE */
-
   createWindow();
-
-  /* TEST NOTIFICATION */
-
-  setTimeout(() => {
-    showNotification("Connected successfully ❤️");
-  }, 1500);
 });
 
 /* CLOSE */
