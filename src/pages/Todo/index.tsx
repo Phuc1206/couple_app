@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { useUserStore } from "../../store/userStore";
-import { addTodo, deleteTodo, ITodo, listenTodos, toggleTodoComplete } from "../../firebase/todo.service";
-import { Calendar, Check, Plus, Trash2 } from "lucide-react";
+// Thay đổi các hàm import từ file service mới
+import { ITodo, listenTodos, saveTodosToFirebase } from "../../firebase/todo.service";
+import { Calendar, Check, Plus, Trash2, GripVertical } from "lucide-react";
+// 🚀 IMPORT CÁC COMPONENT ĐỂ LÀM KÉO THẢ
+import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 
 const Todo = () => {
   const currentUser = useUserStore((state) => state.currentUser);
@@ -9,7 +12,7 @@ const Todo = () => {
   const [todos, setTodos] = useState<ITodo[]>([]);
   const [inputValue, setInputValue] = useState("");
 
-  // Đồng bộ realtime dữ liệu từ Firebase về app
+  // Đồng bộ realtime danh sách mảng từ Firebase về app
   useEffect(() => {
     const unsub = listenTodos((data) => {
       setTodos(data);
@@ -17,10 +20,49 @@ const Todo = () => {
     return () => unsub();
   }, []);
 
-  const handleAdd = () => {
+  // 1. Thao tác THÊM (Chèn việc mới vào đầu mảng)
+  const handleAdd = async () => {
     if (!inputValue.trim()) return;
-    addTodo(inputValue, currentUser);
+
+    const newTodo: ITodo = {
+      id: crypto.randomUUID(), // Tạo chuỗi ID ngẫu nhiên cho item
+      title: inputValue,
+      completed: false,
+      createdBy: currentUser
+    };
+
+    const updated = [newTodo, ...todos];
+    setTodos(updated);
+    await saveTodosToFirebase(updated);
     setInputValue("");
+  };
+
+  // 2. Thao tác TÍCH CHỌN HOÀN THÀNH (Map qua mảng để đổi trạng thái)
+  const handleToggle = async (id: string) => {
+    const updated = todos.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t));
+    setTodos(updated);
+    await saveTodosToFirebase(updated);
+  };
+
+  // 3. Thao tác XÓA (Filter lọc bỏ item ra khỏi mảng)
+  const handleDelete = async (id: string) => {
+    const updated = todos.filter((t) => t.id !== id);
+    setTodos(updated);
+    await saveTodosToFirebase(updated);
+  };
+
+  // 🚀 4. XỬ LÝ SẮP XẾP KHI BUÔNG CHUỘT SAU KHI KÉO THẢ
+  const handleOnDragEnd = async (result: DropResult) => {
+    if (!result.destination) return; // Nếu kéo ra ngoài vùng cho phép thì hủy bỏ
+
+    const items = Array.from(todos);
+    // Bốc phần tử ra khỏi vị trí index cũ
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    // Thả phần tử vào vị trí index mới
+    items.splice(result.destination.index, 0, reorderedItem);
+
+    setTodos(items); // Cập nhật local ngay lập tức cho mượt chuột
+    await saveTodosToFirebase(items); // Đẩy mảng vị trí mới đồng bộ lên Firebase
   };
 
   return (
@@ -33,7 +75,7 @@ const Todo = () => {
         </div>
         <div>
           <h3 className="text-sm font-semibold text-white/90">Our Love Plans 📝</h3>
-          <p className="text-[11px] text-white/40">Cùng Phúc & Linh hoàn thành nhé</p>
+          <p className="text-[11px] text-white/40">Giữ nút sáu chấm để sắp xếp nhé</p>
         </div>
       </div>
 
@@ -55,56 +97,87 @@ const Todo = () => {
         </button>
       </div>
 
-      {/* BODY: DANH SÁCH TO-DO (Bật cuộn chuột nội bộ mượt mà giống ChatBox) */}
-      <div className="mt-4 min-h-0 flex-1 scrollbar-none space-y-2.5 overflow-y-auto pr-1">
-        {todos.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center pt-10 text-center">
-            <span className="text-2xl">✨</span>
-            <p className="mt-2 text-[12px] text-white/30">Chưa có kế hoạch nào được tạo.</p>
-          </div>
-        ) : (
-          todos.map((todo) => (
+      {/* 🚀 BODY: BỌC BẰNG CONTEXT VÀ DROPPABLE KÉO THẢ */}
+      <DragDropContext onDragEnd={handleOnDragEnd}>
+        <Droppable droppableId="love-todos-droppable">
+          {(provided) => (
             <div
-              key={todo.id}
-              className={`flex items-center justify-between rounded-2xl border p-3.5 transition-all duration-300 ${
-                todo.completed ? "border-white/5 bg-white/[0.02] opacity-40" : "border-white/5 bg-white/5 shadow-sm hover:border-white/10"
-              }`}
+              {...provided.droppableProps}
+              ref={provided.innerRef}
+              className="mt-4 min-h-0 flex-1 scrollbar-none space-y-2.5 overflow-y-auto pr-1"
             >
-              <div className="flex flex-1 items-center gap-3 pr-2">
-                {/* NÚT TÍCH CHỌN HOÀN THÀNH (CUSTOM CHECKBOX) */}
-                <button
-                  onClick={() => toggleTodoComplete(todo.id!, todo.completed)}
-                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-all ${
-                    todo.completed ? "border-pink-400 bg-pink-400 text-black" : "border-white/20 bg-transparent hover:border-white/40"
-                  }`}
-                >
-                  {todo.completed && <Check size={12} strokeWidth={3} />}
-                </button>
-
-                {/* NỘI DUNG TEXT VIỆC CẦN LÀM */}
-                <div className="flex flex-col">
-                  <span
-                    className={`text-[13px] leading-tight font-medium text-white/90 transition-all ${
-                      todo.completed ? "text-white/40 line-through" : ""
-                    }`}
-                  >
-                    {todo.title}
-                  </span>
-                  {/* Tag nhỏ hiển thị ai là người tạo ra note này */}
-                  <span className="mt-0.5 text-[9px] tracking-wider text-white/20 uppercase">
-                    By: {todo.createdBy === "Phuc" ? "Phúc ❤️" : "Linh 💖"}
-                  </span>
+              {todos.length === 0 ? (
+                <div className="flex h-full flex-col items-center justify-center pt-10 text-center">
+                  <span className="text-2xl">✨</span>
+                  <p className="mt-2 text-[12px] text-white/30">Chưa có kế hoạch nào được tạo.</p>
                 </div>
-              </div>
+              ) : (
+                todos.map((todo, index) => (
+                  /* Bọc từng item bằng thẻ Draggable */
+                  <Draggable key={todo.id} draggableId={todo.id} index={index}>
+                    {(provided, snapshot) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        className={`flex items-center justify-between rounded-2xl border p-3.5 transition-all duration-200 ${
+                          todo.completed
+                            ? "border-white/5 bg-white/[0.02] opacity-40"
+                            : snapshot.isDragging
+                              ? "scale-[1.02] border-pink-500/40 bg-white/10 shadow-2xl" // Hiệu ứng hắt sáng đổi màu nhẹ khi đang giữ chuột kéo
+                              : "border-white/5 bg-white/5 shadow-sm hover:border-white/10"
+                        }`}
+                      >
+                        <div className="flex flex-1 items-center gap-3 pr-2">
+                          {/* NÚT TAY CẦM KÉO THẢ (Nắm chuột vào biểu tượng này để di chuyển note) */}
+                          <div
+                            {...provided.dragHandleProps}
+                            className="cursor-grab p-0.5 text-white/20 hover:text-white/50 active:cursor-grabbing"
+                          >
+                            <GripVertical size={14} />
+                          </div>
 
-              {/* NÚT XÓA NOTE */}
-              <button onClick={() => deleteTodo(todo.id!)} className="p-1 text-white/20 transition-colors hover:text-red-400/80">
-                <Trash2 size={14} />
-              </button>
+                          {/* NÚT TÍCH CHỌN HOÀN THÀNH */}
+                          <button
+                            onClick={() => handleToggle(todo.id)}
+                            className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-all ${
+                              todo.completed
+                                ? "border-pink-400 bg-pink-400 text-black"
+                                : "border-white/20 bg-transparent hover:border-white/40"
+                            }`}
+                          >
+                            {todo.completed && <Check size={12} strokeWidth={3} />}
+                          </button>
+
+                          {/* NỘI DUNG TEXT VIỆC CẦN LÀM */}
+                          <div className="flex flex-col">
+                            <span
+                              className={`text-[13px] leading-tight font-medium text-white/90 transition-all ${
+                                todo.completed ? "text-white/40 line-through" : ""
+                              }`}
+                            >
+                              {todo.title}
+                            </span>
+                            <span className="mt-0.5 text-[9px] tracking-wider text-white/20 uppercase">
+                              By: {todo.createdBy === "Phuc" ? "Phúc ❤️" : "Linh 💖"}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* NÚT XÓA NOTE */}
+                        <button onClick={() => handleDelete(todo.id)} className="p-1 text-white/20 transition-colors hover:text-red-400/80">
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    )}
+                  </Draggable>
+                ))
+              )}
+              {/* Vùng đệm bắt buộc của thư viện để giữ khoảng trống khi nhấc item lên */}
+              {provided.placeholder}
             </div>
-          ))
-        )}
-      </div>
+          )}
+        </Droppable>
+      </DragDropContext>
     </div>
   );
 };

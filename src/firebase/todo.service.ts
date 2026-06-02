@@ -1,48 +1,28 @@
-import { db } from "./config"; // File cấu hình firebase gốc của bạn
-import { collection, addDoc, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
+import { db } from "./config";
+import { doc, onSnapshot, setDoc } from "firebase/firestore";
 
 export interface ITodo {
-  id?: string;
+  id: string; // Tự tạo chuỗi ID ngẫu nhiên bằng crypto.randomUUID()
   title: string;
   completed: boolean;
   createdBy: "Phuc" | "Linh";
-  timestamp: { seconds: number; nanoseconds: number } | null;
 }
 
-// 1. Lắng nghe danh sách việc cần làm theo thời gian thực
+// Lấy reference tới document dùng chung duy nhất của 2 đứa
+const todoDocRef = doc(db, "app_data", "shared_todos");
+
+// 1. Lắng nghe danh sách todo (Vị trí mảng như nào thì giao diện hiện đúng như thế)
 export const listenTodos = (callback: (todos: ITodo[]) => void) => {
-  const q = query(collection(db, "todos"), orderBy("timestamp", "desc"));
-
-  return onSnapshot(q, (snapshot) => {
-    const todos: ITodo[] = [];
-    snapshot.forEach((doc) => {
-      todos.push({ id: doc.id, ...doc.data() } as ITodo);
-    });
-    callback(todos);
+  return onSnapshot(todoDocRef, (snapshot) => {
+    if (snapshot.exists()) {
+      callback(snapshot.data().list || []);
+    } else {
+      callback([]);
+    }
   });
 };
 
-// 2. Thêm một việc cần làm mới
-export const addTodo = async (title: string, creator: "Phuc" | "Linh") => {
-  if (!title.trim()) return;
-  await addDoc(collection(db, "todos"), {
-    title,
-    completed: false,
-    createdBy: creator,
-    timestamp: serverTimestamp()
-  });
-};
-
-// 3. Đánh dấu Hoàn thành / Chưa hoàn thành
-export const toggleTodoComplete = async (id: string, currentStatus: boolean) => {
-  const todoRef = doc(db, "todos", id);
-  await updateDoc(todoRef, {
-    completed: !currentStatus
-  });
-};
-
-// 4. Xóa một việc khỏi danh sách
-export const deleteTodo = async (id: string) => {
-  const todoRef = doc(db, "todos", id);
-  await deleteDoc(todoRef);
+// 2. Hàm cập nhật lại toàn bộ mảng (Dùng chung cho cả Thêm, Sửa, Xóa, Kéo thả)
+export const saveTodosToFirebase = async (newTodoList: ITodo[]) => {
+  await setDoc(todoDocRef, { list: newTodoList }, { merge: true });
 };

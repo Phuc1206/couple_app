@@ -4,11 +4,11 @@ import FloatingWindow from "../layout/FloatingWindow";
 
 import Home from "../pages/Home";
 import Chat from "../pages/Chat";
-import Memories from "../pages/Memories";
 
 import Error from "../pages/Error";
 import Todo from "../pages/Todo";
 import Profile from "../pages/Profile";
+import Diary from "../pages/Diary";
 
 export const router = createHashRouter([
   {
@@ -30,8 +30,8 @@ export const router = createHashRouter([
         element: <Chat />
       },
       {
-        path: "memories",
-        element: <Memories />
+        path: "diary",
+        element: <Diary />
       },
       {
         path: "todo",

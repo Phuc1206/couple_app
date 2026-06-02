@@ -1,4 +1,4 @@
-import { Home, Image, MessageCircle, User, ListTodo } from "lucide-react";
+import { Home, MessageCircle, User, ListTodo, NotepadText } from "lucide-react";
 
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -9,9 +9,9 @@ const items = [
     path: "/"
   },
   {
-    icon: Image,
-    label: "MEMORIES",
-    path: "/memories"
+    icon: NotepadText,
+    label: "DIARY",
+    path: "/diary"
   },
   {
     icon: MessageCircle,
