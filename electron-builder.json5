@@ -7,14 +7,6 @@
   directories: {
     output: "release/${version}"
   },
-  publish: [
-    {
-      provider: "github",
-      owner: "Phuc1206",
-      repo: "couple_app",
-      releaseType: "draft"
-    }
-  ],
   files: ["dist/**/*", "dist-electron/**/*", "!node_modules/**/*", "!**/*.map", "!**/*.md", "!**/*.log"],
   npmRebuild: false,
   mac: {
