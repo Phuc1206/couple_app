@@ -13,7 +13,6 @@
     "@hello-pangea/dnd": "^18.0.1",
     "clsx": "^2.1.1",
     "dayjs": "^1.11.21",
-    "electron-updater": "^6.8.3",
     "firebase": "^12.14.0",
     "framer-motion": "^12.40.0",
     "lucide-react": "^1.17.0",

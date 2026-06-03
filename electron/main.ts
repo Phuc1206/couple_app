@@ -1,5 +1,5 @@
 import { app, BrowserWindow, Notification, nativeTheme, ipcMain, Tray, Menu } from "electron";
-import { autoUpdater } from "electron-updater";
+// import { autoUpdater } from "electron-updater";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import path from "node:path";
 
@@ -128,52 +128,52 @@ ipcMain.on("push-love-notification", (_event, text: string) => {
 /* -------------------------------- */
 /* CHECK FOR UPDATES */
 /* -------------------------------- */
-// Cấu hình các sự kiện của Auto Updater
-function checkAndApplyUpdates() {
-  // Tự động tải về khi tìm thấy bản cập nhật mới
-  autoUpdater.autoDownload = true;
+// // Cấu hình các sự kiện của Auto Updater
+// function checkAndApplyUpdates() {
+//   // Tự động tải về khi tìm thấy bản cập nhật mới
+//   autoUpdater.autoDownload = true;
 
-  // Khi bắt đầu kiểm tra cập nhật
-  autoUpdater.on("checking-for-update", () => {
-    console.log("Đang kiểm tra bản cập nhật mới từ xa...");
-  });
+//   // Khi bắt đầu kiểm tra cập nhật
+//   autoUpdater.on("checking-for-update", () => {
+//     console.log("Đang kiểm tra bản cập nhật mới từ xa...");
+//   });
 
-  // Khi phát hiện có bản cập nhật mới hơn bản hiện tại
-  autoUpdater.on("update-available", (info) => {
-    if (!Notification.isSupported()) return;
-    new Notification({
-      title: "Hệ thống có cập nhật mới ✨",
-      body: `Đang tự động tải phiên bản v${info.version} về máy cho bạn...`,
-      silent: true
-    }).show();
-  });
+//   // Khi phát hiện có bản cập nhật mới hơn bản hiện tại
+//   autoUpdater.on("update-available", (info) => {
+//     if (!Notification.isSupported()) return;
+//     new Notification({
+//       title: "Hệ thống có cập nhật mới ✨",
+//       body: `Đang tự động tải phiên bản v${info.version} về máy cho bạn...`,
+//       silent: true
+//     }).show();
+//   });
 
-  // Khi đã tải xong bản cập nhật thành công dưới nền
-  autoUpdater.on("update-downloaded", (info) => {
-    if (!Notification.isSupported()) return;
+//   // Khi đã tải xong bản cập nhật thành công dưới nền
+//   autoUpdater.on("update-downloaded", (info) => {
+//     if (!Notification.isSupported()) return;
 
-    const updateNotification = new Notification({
-      title: "Cập nhật đã sẵn sàng! ❤️",
-      body: `Bản nâng cấp v${info.version} đã tải xong. Bấm vào đây để áp dụng ngay.`,
-      silent: false
-    });
+//     const updateNotification = new Notification({
+//       title: "Cập nhật đã sẵn sàng! ❤️",
+//       body: `Bản nâng cấp v${info.version} đã tải xong. Bấm vào đây để áp dụng ngay.`,
+//       silent: false
+//     });
 
-    updateNotification.show();
+//     updateNotification.show();
 
-    // Khi Linh click vào thông báo, app sẽ tự đóng, cài đè bản mới và tự bật lại luôn!
-    updateNotification.on("click", () => {
-      autoUpdater.quitAndInstall();
-    });
-  });
+//     // Khi Linh click vào thông báo, app sẽ tự đóng, cài đè bản mới và tự bật lại luôn!
+//     updateNotification.on("click", () => {
+//       autoUpdater.quitAndInstall();
+//     });
+//   });
 
-  // Xử lý lỗi nếu xảy ra sự cố mạng trong lúc check update
-  autoUpdater.on("error", (err) => {
-    console.error("Lỗi auto-update:", err);
-  });
+//   // Xử lý lỗi nếu xảy ra sự cố mạng trong lúc check update
+//   autoUpdater.on("error", (err) => {
+//     console.error("Lỗi auto-update:", err);
+//   });
 
-  // Thực hiện lệnh kiểm tra luôn
-  autoUpdater.checkForUpdatesAndNotify();
-}
+//   // Thực hiện lệnh kiểm tra luôn
+//   autoUpdater.checkForUpdatesAndNotify();
+// }
 /* -------------------------------- */
 /* APP EVENTS */
 /* -------------------------------- */
@@ -198,7 +198,7 @@ app.whenReady().then(() => {
   createTray();
 
   /* CHECK UPDATE */
-  checkAndApplyUpdates();
+  // checkAndApplyUpdates();
 });
 
 /* CLOSE */
