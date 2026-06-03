@@ -6,16 +6,14 @@ import { listenHomeData, updateWidgetText, updateMyMood, updateSpecialDays, IHom
 import { calculateLoveDays, calculateLoveTimeDetailed, getCountdown } from "../../utils/dateUtils";
 import { Heart, CheckCircle2, Sparkles, Smile, Cake, Plane, CalendarDays, Plus, X, BookOpen } from "lucide-react";
 import { getTodayDiary, saveTodayDiary } from "../../firebase/diary.service";
-import { doc, onSnapshot } from "firebase/firestore";
-import { db } from "../../firebase/config";
 import { useNavigate } from "react-router-dom";
+import { anniversaryDate } from "../../constant/variable";
 
 export default function Home() {
   const navigate = useNavigate();
   const currentUser = useUserStore((state) => state.currentUser);
   const partner: "Phuc" | "Linh" = currentUser === "Phuc" ? "Linh" : "Phuc";
 
-  const anniversaryDate = "2026-03-29";
   const [loveTime, setLoveTime] = useState(calculateLoveDays(anniversaryDate));
 
   const [todos, setTodos] = useState<ITodo[]>([]);
@@ -40,11 +38,6 @@ export default function Home() {
   // 🚀 STATE QUẢN LÝ MENU CHỌN TÂM TRẠNG
   const [isMoodOpen, setIsMoodOpen] = useState(false);
   const moodMenuRef = useRef<HTMLDivElement>(null);
-
-  // 🚀 MỐC QUẢN LÝ SO SÁNH ĐỂ BẮN THÔNG BÁO REALTIME
-  const prevWidgetText = useRef<string | null>(null);
-  const prevSpecialDaysLength = useRef<number | null>(null);
-  const prevDiaryNote = useRef<string | null>(null);
 
   // Danh sách các tâm trạng siêu dễ thương để chọn
   const moodList = [
@@ -103,89 +96,17 @@ export default function Home() {
     const unsubTodos = listenTodos((data) => setTodos(data));
     const unsubHome = listenHomeData((data) => {
       setHomeData(data);
-      setWidgetInput(data.widgetText);
+
+      if (!isEditingWidget) {
+        setWidgetInput(data.widgetText);
+      }
     });
+
     return () => {
       unsubTodos();
       unsubHome();
     };
-  }, []);
-
-  // 🚀 REALTIME WATCHER: PHÁT HIỆN ĐỐI PHƯƠNG THAY ĐỔI DỮ LIỆU ĐỂ BẮN THÔNG BÁO ELECTRON
-  useEffect(() => {
-    // 1. Theo dõi Góc nhắn gửi & Mốc thời gian mong đợi
-    const homeDocRef = doc(db, "app_data", "homepage_shared");
-    const unsubscribeHome = onSnapshot(homeDocRef, (snapshot) => {
-      if (!snapshot.exists()) return;
-      const data = snapshot.data();
-
-      // Nạp mốc dữ liệu ban đầu khi mở ứng dụng
-      if (prevWidgetText.current === null) {
-        prevWidgetText.current = data.widgetText || "";
-        prevSpecialDaysLength.current = data.specialDays?.length || 0;
-        return;
-      }
-
-      // Nếu người thực hiện chỉnh sửa dữ liệu chính là đối phương (partner)
-      if (data.widgetUpdatedBy === partner) {
-        // Kiểm tra xem lời nhắn gửi ngọt ngào có bị thay đổi không
-        if (data.widgetText !== prevWidgetText.current) {
-          (window as any).ipcRenderer?.send(
-            "push-love-notification",
-            `${partner === "Phuc" ? "Phúc" : "Linh"} vừa gửi lời nhắn mới: "${data.widgetText}" 💬`
-          );
-          prevWidgetText.current = data.widgetText;
-        }
-
-        // Kiểm tra xem có thêm mốc ngày đặc biệt mới không
-        const currentDaysLength = data.specialDays?.length || 0;
-        const previousDaysLength = prevSpecialDaysLength.current ?? 0;
-        if (currentDaysLength !== previousDaysLength) {
-          if (currentDaysLength > previousDaysLength) {
-            (window as any).ipcRenderer?.send(
-              "push-love-notification",
-              `${partner === "Phuc" ? "Phúc" : "Linh"} vừa tạo một mốc thời gian mong đợi mới đó! ✨`
-            );
-          }
-          prevSpecialDaysLength.current = currentDaysLength;
-        }
-      }
-    });
-
-    // 2. Theo dõi Nhật ký hôm nay độc lập
-    const today = new Date();
-    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-    const diaryDocRef = doc(db, "app_data", "homepage_shared", "diary_shared", todayStr);
-
-    const unsubscribeDiary = onSnapshot(diaryDocRef, (snapshot) => {
-      if (!snapshot.exists()) return;
-      const data = snapshot.data();
-
-      // Nhận diện vùng dữ liệu của đối phương
-      const partnerDiary = partner === "Phuc" ? data.phucData : data.linhData;
-      if (!partnerDiary) return;
-
-      // Nạp mốc dữ liệu ban đầu
-      if (prevDiaryNote.current === null) {
-        prevDiaryNote.current = partnerDiary.note || "";
-        return;
-      }
-
-      // Nếu nội dung nhật ký của đối phương thực sự thay đổi khác mốc cũ
-      if (partnerDiary.note !== prevDiaryNote.current) {
-        (window as any).ipcRenderer?.send(
-          "push-love-notification",
-          `${partner === "Phuc" ? "Phúc" : "Linh"} vừa ghi nhật ký hôm nay: "${partnerDiary.note}" 📖`
-        );
-        prevDiaryNote.current = partnerDiary.note;
-      }
-    });
-
-    return () => {
-      unsubscribeHome();
-      unsubscribeDiary();
-    };
-  }, [currentUser, partner]);
+  }, [isEditingWidget]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -435,11 +356,17 @@ export default function Home() {
                     key={day.id}
                     className="group flex items-center justify-between rounded-xl border border-white/5 bg-white/5 p-2.5 transition-all hover:border-white/10"
                   >
-                    <div className="flex min-w-0 items-center gap-2.5">
+                    <div className="flex min-w-0 flex-1 items-center gap-2.5 pr-2">
                       <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border ${config.colorClass}`}>
                         {config.icon}
                       </div>
-                      <div className="flex min-w-0 flex-col">
+                      <div className="group/tooltip relative flex min-w-0 flex-col">
+                        {/* 🚀 TOOLTIP CHỮ TỰ CHẾ BẰNG TAILWIND (SẼ HIỆN KHI HOVER) */}
+                        <div className="pointer-events-none absolute top-full left-0 z-50 mb-1 max-w-[200px] scale-95 rounded-lg border border-white/10 bg-neutral-900/95 px-2 py-1 text-[10px] break-words whitespace-normal text-white/90 opacity-0 shadow-xl transition-all duration-200 group-hover/tooltip:pointer-events-auto group-hover/tooltip:scale-100 group-hover/tooltip:opacity-100">
+                          {day.title}
+                        </div>
+
+                        {/* Chữ hiển thị gốc của bạn */}
                         <span className="truncate text-[12px] font-medium text-white/90">{day.title}</span>
                         <span className="text-[9px] text-white/30">
                           {new Date(day.date).toLocaleDateString("vi-VN", { month: "short", day: "numeric", year: "numeric" })}
@@ -447,18 +374,20 @@ export default function Home() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex shrink-0 items-center gap-2">
                       <span
                         className={`rounded-md px-2 py-0.5 text-[11px] font-bold ${config.colorClass.split(" ")[0]} ${config.colorClass.split(" ")[1]}`}
                       >
                         {countdownText}
                       </span>
-                      <button
-                        onClick={() => handleDeleteSpecialDay(day.id)}
-                        className="rounded-md p-1 text-white/20 opacity-0 transition-all group-hover:opacity-100 hover:text-red-400"
-                      >
-                        <X size={12} />
-                      </button>
+                      <div className="flex h-5 w-5 items-center justify-center">
+                        <button
+                          onClick={() => handleDeleteSpecialDay(day.id)}
+                          className="rounded-md p-1 text-white/20 opacity-0 transition-all group-hover:opacity-100 hover:text-red-400"
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );

@@ -132,7 +132,7 @@ function App() {
 
       const lastDoc = snapshot.docs[0];
       const lastMsgData = lastDoc.data();
-      console.log("Tin nhắn mới về:", lastMsgData);
+
       // Nạp mốc ID tin nhắn cũ nhất lúc vừa bật app
       if (isFirstLoadChat.current) {
         lastMessageId.current = lastDoc.id;
