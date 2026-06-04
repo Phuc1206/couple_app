@@ -7,7 +7,7 @@ import { calculateLoveDays, calculateLoveTimeDetailed, getCountdown } from "../.
 import { Heart, CheckCircle2, Sparkles, Smile, Cake, Plane, CalendarDays, Plus, X, BookOpen } from "lucide-react";
 import { getTodayDiary, saveTodayDiary } from "../../firebase/diary.service";
 import { useNavigate } from "react-router-dom";
-import { anniversaryDate } from "../../constant/variable";
+import { anniversaryDate, moodList } from "../../constant/variable";
 
 export default function Home() {
   const navigate = useNavigate();
@@ -40,16 +40,6 @@ export default function Home() {
   const moodMenuRef = useRef<HTMLDivElement>(null);
 
   // Danh sách các tâm trạng siêu dễ thương để chọn
-  const moodList = [
-    "🥰 Hạnh phúc",
-    "💖 Nhớ người iu",
-    "🤪 Nghịch ngợm",
-    "😴 Buồn ngủ",
-    "🐱 Đang dỗi",
-    "🍽️ Đang đói bụng",
-    "🔥 Đang tập trung",
-    "🥺 Cần ôm ôm"
-  ];
 
   // LOGIC TỰ ĐỘNG ĐỔI INTERVAL THEO CHẾ ĐỘ XEM
   useEffect(() => {
