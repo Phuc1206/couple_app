@@ -8,20 +8,36 @@ export interface IDiaryEntry {
   updatedBy: string;
   updatedAt: string;
 }
-
+export const formatDate = (date: Date = new Date()) => {
+  return date.toLocaleDateString("en-CA");
+};
 const getTodayStr = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
 
 // 1. Lưu nhật ký của hôm nay
-export const saveTodayDiary = async (user: "Phuc" | "Linh", data: { mood: string; note: string; whatILove: string }) => {
-  const todayStr = getTodayStr();
+export const saveTodayDiary = async (
+  user: "Phuc" | "Linh",
+  data: {
+    mood: string;
+    note: string;
+    whatILove: string;
+  }
+) => {
+  return saveDiary(user, getTodayStr(), data);
+};
+export const saveDiary = async (
+  user: "Phuc" | "Linh",
+  date: string,
+  data: {
+    mood: string;
+    note: string;
+    whatILove: string;
+  }
+) => {
+  const docRef = doc(db, "app_data", "homepage_shared", "diary_shared", date);
 
-  // 🚀 ĐỔI VỊ TRÍ: "diary_shared" đứng trước (làm tên Subcollection), todayStr đứng sau (làm Document ID)
-  const docRef = doc(db, "app_data", "homepage_shared", "diary_shared", todayStr);
-
-  // Bỏ bớt bước getDoc check existingDoc để app chạy nhanh hơn, { merge: true } của Firestore lo hết rồi nha!
   await setDoc(
     docRef,
     {
@@ -33,20 +49,29 @@ export const saveTodayDiary = async (user: "Phuc" | "Linh", data: { mood: string
     { merge: true }
   );
 };
+export const getDiary = async (
+  user: "Phuc" | "Linh",
+  date: string
+): Promise<{
+  mood: string;
+  note: string;
+  whatILove: string;
+} | null> => {
+  const docRef = doc(db, "app_data", "homepage_shared", "diary_shared", date);
 
-// 2. Lấy dữ liệu nhật ký hôm nay của User
-export const getTodayDiary = async (user: "Phuc" | "Linh"): Promise<{ mood: string; note: string; whatILove: string } | null> => {
-  const todayStr = getTodayStr();
-
-  // 🚀 Đồng bộ lại đường dẫn giống hàm lưu ở trên
-  const docRef = doc(db, "app_data", "homepage_shared", "diary_shared", todayStr);
   const snapshot = await getDoc(docRef);
 
   if (snapshot.exists()) {
     const data = snapshot.data();
+
     return user === "Phuc" ? data.phucData || null : data.linhData || null;
   }
+
   return null;
+};
+// 2. Lấy dữ liệu nhật ký hôm nay của User
+export const getTodayDiary = async (user: "Phuc" | "Linh") => {
+  return getDiary(user, getTodayStr());
 };
 
 export interface IDiaryTimelineItem {

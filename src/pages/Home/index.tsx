@@ -5,7 +5,7 @@ import { listenTodos, ITodo } from "../../firebase/todo.service";
 import { listenHomeData, updateWidgetText, updateMyMood, updateSpecialDays, IHomeData, ISpecialDay } from "../../firebase/home.service";
 import { calculateLoveDays, calculateLoveTimeDetailed, getCountdown } from "../../utils/dateUtils";
 import { Heart, CheckCircle2, Sparkles, Smile, Cake, Plane, CalendarDays, Plus, X, BookOpen } from "lucide-react";
-import { getTodayDiary, saveTodayDiary } from "../../firebase/diary.service";
+import { getDiary, saveDiary, formatDate } from "../../firebase/diary.service";
 import { useNavigate } from "react-router-dom";
 import { anniversaryDate, moodList } from "../../constant/variable";
 
@@ -33,6 +33,7 @@ export default function Home() {
 
   const [diaryNote, setDiaryNote] = useState("");
   const [diaryLove, setDiaryLove] = useState("");
+  const [selectedDiaryDate, setSelectedDiaryDate] = useState(formatDate());
   const [isDiarySaved, setIsDiarySaved] = useState(false);
 
   // 🚀 STATE QUẢN LÝ MENU CHỌN TÂM TRẠNG
@@ -62,18 +63,24 @@ export default function Home() {
   // Tự động load lại xem hôm nay mình đã viết nhật ký chưa
   useEffect(() => {
     const loadDiary = async () => {
-      const todayData = await getTodayDiary(currentUser);
-      if (todayData) {
-        setDiaryNote(todayData.note);
-        setDiaryLove(todayData.whatILove);
+      const data = await getDiary(currentUser, selectedDiaryDate);
+
+      if (data) {
+        setDiaryNote(data.note);
+        setDiaryLove(data.whatILove);
         setIsDiarySaved(true);
+      } else {
+        setDiaryNote("");
+        setDiaryLove("");
+        setIsDiarySaved(false);
       }
     };
+
     loadDiary();
-  }, [currentUser]);
+  }, [currentUser, selectedDiaryDate]);
 
   const handleSaveDiary = async () => {
-    await saveTodayDiary(currentUser, {
+    await saveDiary(currentUser, selectedDiaryDate, {
       mood: myStatus?.mood || "🥰 Bình thường",
       note: diaryNote,
       whatILove: diaryLove
@@ -407,6 +414,17 @@ export default function Home() {
           </div>
 
           <div className="mt-3 space-y-2.5">
+            <div className="space-y-1">
+              <label className="text-[9px] font-medium text-white/30">Viết cho ngày</label>
+
+              <input
+                type="date"
+                value={selectedDiaryDate}
+                max={formatDate()}
+                onChange={(e) => setSelectedDiaryDate(e.target.value)}
+                className="w-full rounded-xl border border-white/5 bg-black/25 p-2 text-[12px] text-white outline-none"
+              />
+            </div>
             {/* Ô 1: Note ngắn hôm nay */}
             <div className="space-y-1">
               <label className="text-[9px] font-medium text-white/30">Hôm nay thế nào?</label>
