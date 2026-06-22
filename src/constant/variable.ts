@@ -36,3 +36,47 @@ export const needMap: any = {
   CALL: "📞 Gọi điện",
   WALK: "🚶 Đi dạo"
 };
+
+export const emotions = [
+  {
+    id: "SAD",
+    emoji: "😔",
+    label: "Buồn"
+  },
+  {
+    id: "STRESS",
+    emoji: "😮‍💨",
+    label: "Stress"
+  },
+  {
+    id: "EXHAUSTED",
+    emoji: "😩",
+    label: "Kiệt sức"
+  },
+  {
+    id: "SICK",
+    emoji: "🤒",
+    label: "Ốm"
+  },
+  {
+    id: "ANXIOUS",
+    emoji: "😰",
+    label: "Lo lắng"
+  },
+  {
+    id: "MISS",
+    emoji: "🥺",
+    label: "Nhớ anh/em"
+  },
+  {
+    id: "LONELY",
+    emoji: "🫥",
+    label: "Cô đơn"
+  },
+  {
+    id: "OVERTHINK",
+    emoji: "🌀",
+    label: "Nghĩ nhiều"
+  }
+];
+export const needOptions = ["🤗 Ôm", "👂 Lắng nghe", "📞 Gọi điện", "🏠 Ở cạnh em", "🍰 Dẫn đi ăn"];

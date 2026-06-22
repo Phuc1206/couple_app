@@ -71,3 +71,21 @@ export const calculateLoveTimeDetailed = (startDateString: string) => {
     displaySeconds
   };
 };
+
+export const formatSignalTime = (date: string) => {
+  const diff = Date.now() - new Date(date).getTime();
+
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+
+  if (minutes < 1) return "Vừa xong";
+  if (minutes < 60) return `${minutes} phút trước`;
+  if (hours < 24) return `${hours} giờ trước`;
+
+  return new Date(date).toLocaleString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+};

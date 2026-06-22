@@ -13,7 +13,7 @@ export default function FloatingWindow() {
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,120,160,0.12),transparent_45%)]" />
 
       <div className="relative z-10 h-full scrollbar-none px-5 pt-14 pb-32">
-        <div className="mx-auto flex h-full w-full max-w-[400px] flex-col items-center justify-center">
+        <div className="mx-auto flex min-h-full w-full max-w-[400px] flex-col">
           <Outlet />
         </div>
       </div>

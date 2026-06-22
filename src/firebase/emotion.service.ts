@@ -74,6 +74,6 @@ export const subscribeEmotionSignal = (user: "Phuc" | "Linh", callback: (data: a
 
     const data = snap.data();
 
-    callback(user === "Phuc" ? data.phucSignal || null : data.linhSignal || null);
+    callback(user === "Phuc" ? data.linhSignal || null : data.phucSignal || null);
   });
 };
