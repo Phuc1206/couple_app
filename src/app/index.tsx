@@ -25,6 +25,7 @@ function App() {
   // 🚀 THÊM 2 MỐC NÀY ĐỂ THEO DÕI TRẠNG THÁI ĐỐI PHƯƠNG
   const prevPartnerMood = useRef<string | null>(null);
   const prevPartnerOnline = useRef<boolean | null>(null);
+  const prevPartnerSignal = useRef<string | null>(null);
 
   const isFirstLoadChat = useRef(true);
   const lastMessageId = useRef<string | null>(null);
@@ -72,7 +73,17 @@ function App() {
       }
       if (partnerStatus) {
         const partnerNameDisplay = partner === "Phuc" ? "Phúc" : "Linh";
+        const signal = partner === "Phuc" ? data.phucSignal : data.linhSignal;
 
+        if (signal) {
+          const currentEmotion = signal.emotion || "";
+
+          if (currentEmotion !== prevPartnerSignal.current) {
+            sendLoveNotification(`${partnerNameDisplay} vừa gửi một tín hiệu cảm xúc 🫂`);
+
+            prevPartnerSignal.current = currentEmotion;
+          }
+        }
         // 1. Kiểm tra thay đổi Tâm Trạng (Mood)
         const currentMood = partnerStatus.mood || "";
         if (currentMood !== prevPartnerMood.current) {

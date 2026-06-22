@@ -1,13 +1,17 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useUserStore } from "../../store/userStore";
 import { listenTodos, ITodo } from "../../firebase/todo.service";
 import { listenHomeData, updateWidgetText, updateMyMood, updateSpecialDays, IHomeData, ISpecialDay } from "../../firebase/home.service";
 import { calculateLoveDays, calculateLoveTimeDetailed, getCountdown } from "../../utils/dateUtils";
-import { Heart, CheckCircle2, Sparkles, Smile, Cake, Plane, CalendarDays, Plus, X, BookOpen } from "lucide-react";
+import { Heart, CheckCircle2, Sparkles, Cake, Plane, CalendarDays, Plus, X, BookOpen } from "lucide-react";
 import { getDiary, saveDiary, formatDate } from "../../firebase/diary.service";
 import { useNavigate } from "react-router-dom";
-import { anniversaryDate, moodList } from "../../constant/variable";
+import { anniversaryDate, emotionMap, needMap, reasonMap } from "../../constant/variable";
+import { saveEmotionSignal, subscribeEmotionSignal } from "../../firebase/emotion.service";
+import LoveCounterCard from "./components/LoveCounterCard";
+import MoodCard from "./components/MoodCard";
+import WidgetCard from "./components/WidgetCard";
 
 export default function Home() {
   const navigate = useNavigate();
@@ -20,7 +24,6 @@ export default function Home() {
   const [homeData, setHomeData] = useState<IHomeData | null>(null);
   const [widgetInput, setWidgetInput] = useState("");
   const [isEditingWidget, setIsEditingWidget] = useState(false);
-
   // CÁC STATE CHO MODAL THÊM NGÀY ĐẶC BIỆT
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newTitle, setNewTitle] = useState("");
@@ -37,10 +40,26 @@ export default function Home() {
   const [isDiarySaved, setIsDiarySaved] = useState(false);
 
   // 🚀 STATE QUẢN LÝ MENU CHỌN TÂM TRẠNG
-  const [isMoodOpen, setIsMoodOpen] = useState(false);
-  const moodMenuRef = useRef<HTMLDivElement>(null);
 
-  // Danh sách các tâm trạng siêu dễ thương để chọn
+  const [emotion, setEmotion] = useState("");
+  const [reasons, setReasons] = useState<string[]>([]);
+  const [needs, setNeeds] = useState<string[]>([]);
+  const [level, setLevel] = useState<1 | 2 | 3>(2);
+  const [message, setMessage] = useState("");
+  const [signal, setSignal] = useState<any>();
+  const [isSignalOpen, setIsSignalOpen] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = subscribeEmotionSignal(
+      partner,
+
+      (data) => {
+        setSignal(data);
+      }
+    );
+
+    return unsubscribe;
+  }, [partner]);
 
   // LOGIC TỰ ĐỘNG ĐỔI INTERVAL THEO CHẾ ĐỘ XEM
   useEffect(() => {
@@ -78,17 +97,6 @@ export default function Home() {
 
     loadDiary();
   }, [currentUser, selectedDiaryDate]);
-
-  const handleSaveDiary = async () => {
-    await saveDiary(currentUser, selectedDiaryDate, {
-      mood: myStatus?.mood || "🥰 Bình thường",
-      note: diaryNote,
-      whatILove: diaryLove
-    });
-    setIsDiarySaved(true);
-    alert("Đã lưu lại khoảnh khắc hôm nay! ❤️");
-  };
-
   useEffect(() => {
     const unsubTodos = listenTodos((data) => setTodos(data));
     const unsubHome = listenHomeData((data) => {
@@ -104,16 +112,15 @@ export default function Home() {
       unsubHome();
     };
   }, [isEditingWidget]);
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (moodMenuRef.current && !moodMenuRef.current.contains(event.target as Node)) {
-        setIsMoodOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  const handleSaveDiary = async () => {
+    await saveDiary(currentUser, selectedDiaryDate, {
+      mood: myStatus?.mood || "🥰 Bình thường",
+      note: diaryNote,
+      whatILove: diaryLove
+    });
+    setIsDiarySaved(true);
+    alert("Đã lưu lại khoảnh khắc hôm nay! ❤️");
+  };
 
   const totalTodos = todos.length;
   const completedTodos = todos.filter((t) => t.completed).length;
@@ -129,7 +136,6 @@ export default function Home() {
 
   const handleSelectMood = async (selectedMood: string) => {
     await updateMyMood(currentUser, selectedMood);
-    setIsMoodOpen(false);
   };
 
   const getDayConfig = (type: "anniversary" | "birthday" | "valentine" | "travel") => {
@@ -173,138 +179,57 @@ export default function Home() {
     const updatedDays = currentDays.filter((day) => day.id !== idToXoa);
     await updateSpecialDays(updatedDays);
   };
+  const handleSaveSignal = async () => {
+    await saveEmotionSignal(currentUser, {
+      emotion,
+      reasons,
+      needs,
+      level,
+      message,
+      updatedAt: ""
+    });
 
+    setSignal({
+      emotion,
+      reasons,
+      needs,
+      level,
+      message,
+      updatedAt: new Date().toISOString()
+    });
+
+    setEmotion("");
+    setReasons([]);
+    setNeeds([]);
+    setLevel(2);
+    setMessage("");
+
+    setIsSignalOpen(false);
+  };
+  const toggleView = () => {
+    if (viewMode === "days") {
+      setViewMode("seconds");
+    } else {
+      setViewMode("days");
+    }
+  };
   return (
     <div className="relative flex h-[500px] w-[340px] items-center justify-center">
       <div className="flex h-full min-h-0 w-full scrollbar-none flex-col space-y-4 overflow-y-auto pr-1 select-none">
         {/* 1. BỘ ĐẾM NGÀY YÊU NHAU */}
-        <button
-          onClick={() => setViewMode(viewMode === "days" ? "seconds" : "days")}
-          className="group relative flex w-full flex-col items-center justify-center rounded-[32px] border border-white/5 bg-gradient-to-b from-pink-500/10 to-transparent p-6 text-center shadow-md backdrop-blur-xl transition-all duration-300 hover:border-pink-500/20 active:scale-[0.99]"
-        >
-          <div className="relative flex h-14 w-14 items-center justify-center rounded-full bg-pink-500/20 text-pink-400 transition-transform duration-500 group-hover:scale-110">
-            <Heart size={28} className="animate-pulse fill-pink-500/40" />
-          </div>
-
-          {viewMode === "days" ? (
-            <div className="animate-fade-in w-full">
-              <h2 className="mt-3 bg-gradient-to-r from-pink-300 via-rose-300 to-amber-200 bg-clip-text text-2xl font-black tracking-wider text-transparent">
-                {loveTime.totalDays} NGÀY
-              </h2>
-              <p className="mt-1 text-[11px] font-medium tracking-[1px] text-white/40 uppercase">
-                {loveTime.years > 0 && `${loveTime.years} năm `}
-                {loveTime.months > 0 && `${loveTime.months} tháng `}
-                {loveTime.days} ngày bên nhau
-              </p>
-            </div>
-          ) : (
-            <div className="animate-fade-in w-full">
-              <h2 className="mt-3 bg-gradient-to-r from-pink-200 via-rose-300 to-amber-200 bg-clip-text font-mono text-xl font-black tracking-wide text-transparent">
-                {loveTimeDetailed.displayHours}h {loveTimeDetailed.displayMinutes}m{" "}
-                <span className="inline-block min-w-[28px] text-left text-pink-400">
-                  {String(loveTimeDetailed.displaySeconds).padStart(2, "0")}s
-                </span>
-              </h2>
-              <p className="mt-1 truncate px-2 font-mono text-[10px] tracking-[0.5px] text-white/30">
-                Tương đương: {loveTimeDetailed.totalSeconds.toLocaleString()} giây yêu nhau
-              </p>
-            </div>
-          )}
-
-          <span className="absolute bottom-2 text-[8px] tracking-wider text-white/10 uppercase opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-            Click để đổi chế độ xem 🔄
-          </span>
-        </button>
+        <LoveCounterCard viewMode={viewMode} setViewMode={toggleView} loveTime={loveTime} loveTimeDetailed={loveTimeDetailed} />
 
         {/* 2. TRẠNG THÁI ĐỐI PHƯƠNG & BẢN THÂN */}
-        <div className="relative grid grid-cols-2 gap-3">
-          <div className="flex flex-col rounded-2xl border border-white/5 bg-white/5 p-3">
-            <div className="flex items-center gap-2">
-              <div
-                className={`h-2 w-2 rounded-full ${partnerStatus?.online ? "animate-pulse bg-green-400 shadow-[0_0_8px_#4ade80]" : "bg-white/20"}`}
-              />
-              <span className="text-[11px] font-bold text-white/60">{partner === "Phuc" ? "Phúc" : "Linh"} đang:</span>
-            </div>
-            <span className="mt-1.5 truncate text-[13px] font-semibold text-pink-300">{partnerStatus?.mood || "✨ Đang yêu"}</span>
-          </div>
-
-          <div className="relative" ref={moodMenuRef}>
-            <button
-              onClick={() => setIsMoodOpen(!isMoodOpen)}
-              className={`flex h-full w-full flex-col rounded-2xl border bg-white/5 p-3 text-left transition-all hover:bg-white/[0.08] active:scale-95 ${
-                isMoodOpen ? "border-pink-500/30 bg-pink-500/5 shadow-lg" : "border-white/5"
-              }`}
-            >
-              <div className="flex items-center gap-1.5 text-[11px] text-white/40">
-                <Smile size={12} className={isMoodOpen ? "text-pink-400" : ""} />
-                <span>Tâm trạng của bạn:</span>
-              </div>
-              <span className="mt-1.5 truncate text-[13px] font-semibold text-amber-200">{myStatus?.mood || "🥰 Đặt trạng thái"}</span>
-            </button>
-
-            {isMoodOpen && (
-              <div className="animate-fade-in absolute bottom-full left-0 z-40 mb-2 max-h-[170px] w-[155px] scrollbar-none overflow-y-auto rounded-xl border border-white/10 bg-[#160c0ebd]/95 p-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.6)] backdrop-blur-xl">
-                <div className="mb-1 border-b border-white/5 px-2 py-1 text-[9px] font-bold tracking-wider text-white/30 uppercase">
-                  Hôm nay thế nào?
-                </div>
-                <div className="space-y-0.5">
-                  {moodList.map((moodItem) => (
-                    <button
-                      key={moodItem}
-                      onClick={() => handleSelectMood(moodItem)}
-                      className={`w-full rounded-lg px-2 py-1.5 text-left text-[12px] font-medium text-white/80 transition-colors hover:bg-pink-500/10 hover:text-pink-400 ${
-                        myStatus?.mood === moodItem ? "bg-white/5 font-bold text-amber-200" : ""
-                      }`}
-                    >
-                      {moodItem}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
+        <MoodCard partner={partner} partnerStatus={partnerStatus} myStatus={myStatus} onSelectMood={handleSelectMood} />
         {/* 3. WIDGET ĐÔI REALTIME */}
-        <div className="flex flex-col rounded-2xl border border-white/5 bg-[#2a1b1d]/40 p-4 shadow-lg">
-          <div className="flex items-center justify-between border-b border-white/5 pb-2">
-            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-white/40">
-              <Sparkles size={12} className="text-pink-400" />
-              <span>Góc nhắn gửi ngọt ngào 💭</span>
-            </div>
-            {isEditingWidget ? (
-              <button onClick={handleSaveWidget} className="text-[10px] font-bold text-pink-400 hover:underline">
-                Xong
-              </button>
-            ) : (
-              <button onClick={() => setIsEditingWidget(true)} className="text-[10px] font-bold text-white/30 hover:text-white/60">
-                Sửa
-              </button>
-            )}
-          </div>
-          <div className="mt-3">
-            {isEditingWidget ? (
-              <textarea
-                value={widgetInput}
-                onChange={(e) => setWidgetInput(e.target.value)}
-                maxLength={100}
-                rows={2}
-                className="w-full resize-none rounded-xl border border-white/10 bg-black/20 p-2 text-[13px] text-white outline-none placeholder:text-white/20"
-                placeholder="Viết gì đó cho người iu thấy đi..."
-              />
-            ) : (
-              <p className="text-[13px] leading-relaxed whitespace-pre-wrap text-white/80 italic">
-                "{homeData?.widgetText || "Hãy viết những lời ngọt ngào tại đây..."}"
-              </p>
-            )}
-            {homeData?.widgetUpdatedBy && (
-              <span className="mt-2 block text-right text-[9px] tracking-wider text-white/20 uppercase">
-                Cập nhật bởi: {homeData.widgetUpdatedBy === "Phuc" ? "Phúc" : "Linh"}
-              </span>
-            )}
-          </div>
-        </div>
-
+        <WidgetCard
+          data={homeData}
+          isEditingWidget={isEditingWidget}
+          setIsEditingWidget={setIsEditingWidget}
+          widgetInput={widgetInput}
+          setWidgetInput={setWidgetInput}
+          onSaveWidget={handleSaveWidget}
+        />
         {/* 4. TIẾN ĐỘ TODO LIST */}
         <div className="flex items-center gap-4 rounded-2xl border border-white/5 bg-white/5 p-4">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-400/10 text-amber-300">
@@ -325,7 +250,6 @@ export default function Home() {
             </div>
           </div>
         </div>
-
         {/* 5. DANH SÁCH CÁC NGÀY ĐẶC BIỆT */}
         <div className="flex flex-col rounded-2xl border border-white/5 bg-white/[0.02] p-4">
           <div className="flex items-center justify-between border-b border-white/5 pb-2">
@@ -394,7 +318,59 @@ export default function Home() {
             )}
           </div>
         </div>
+        <div className="mb-4 rounded-3xl border border-white/5 bg-gradient-to-br from-pink-500/5 to-purple-500/5 p-4 backdrop-blur-xl">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-white">🤍 Điều em muốn anh biết</h3>
 
+            <button
+              onClick={() => {
+                setEmotion(signal?.emotion || "");
+                setReasons(signal?.reasons || []);
+                setNeeds(signal?.needs || []);
+                setLevel(signal?.level || 2);
+                setMessage(signal?.message || "");
+
+                setIsSignalOpen(true);
+              }}
+            >
+              Chỉnh sửa
+            </button>
+          </div>
+
+          {signal ? (
+            <>
+              <p className="mt-3 text-lg font-semibold">{emotionMap[signal.emotion]}</p>
+
+              <div className="mt-3 flex flex-wrap gap-2">
+                {signal.reasons?.map((r: string) => (
+                  <span key={r} className="rounded-full bg-white/5 px-2 py-1 text-[10px]">
+                    {reasonMap[r]}
+                  </span>
+                ))}
+              </div>
+
+              <div className="mt-2 flex flex-wrap gap-2">
+                {signal.needs?.map((n: string) => (
+                  <span key={n} className="rounded-full bg-pink-500/10 px-2 py-1 text-[10px] text-pink-300">
+                    {needMap[n]}
+                  </span>
+                ))}
+              </div>
+
+              {signal.message && (
+                <div className="mt-3 rounded-xl bg-black/20 p-3">
+                  <p className="text-xs text-white/70 italic">"{signal.message}"</p>
+                </div>
+              )}
+
+              <p className="mt-3 text-[10px] text-white/30">🕒 {new Date(signal.updatedAt).toLocaleTimeString()}</p>
+            </>
+          ) : (
+            <div className="mt-3">
+              <p className="text-xs text-white/50">Hôm nay người ấy chưa gửi tín hiệu nào ✨</p>
+            </div>
+          )}
+        </div>
         {/* 6. WIDGET NHẬT KÝ NHANH HÔM NAY */}
         <div className="flex flex-col rounded-2xl border border-white/5 bg-gradient-to-br from-amber-500/[0.03] to-pink-500/[0.03] p-4 shadow-md">
           <div className="flex items-center justify-between border-b border-white/5 pb-2">
@@ -535,6 +511,74 @@ export default function Home() {
                 Tạo Ngay
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {isSignalOpen && (
+        <div className="fixed inset-0 z-50 mb-32 flex items-end bg-black/60">
+          <div className="w-full rounded-t-3xl bg-[#171717] p-5">
+            <h2 className="mb-4 text-lg font-bold">🤍 Điều em muốn anh biết</h2>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                ["STRESS", "😮‍💨"],
+
+                ["SAD", "😔"],
+
+                ["EXHAUSTED", "😩"],
+
+                ["SICK", "🤒"],
+
+                ["ANXIOUS", "😰"]
+              ].map(([v, e]) => (
+                <button
+                  key={v}
+                  onClick={() => setEmotion(v)}
+                  className={`rounded-2xl p-3 ${emotion === v ? "border border-pink-400 bg-pink-500/20" : "bg-white/5"} `}
+                >
+                  {e}
+                </button>
+              ))}
+            </div>
+            <p className="mt-4 mb-2 text-sm">Nguyên nhân</p>
+
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(reasonMap).map(([key, label]) => (
+                <button
+                  key={key}
+                  onClick={() => {
+                    setReasons((prev) => (prev.includes(key) ? prev.filter((i) => i !== key) : [...prev, key]));
+                  }}
+                  className={`rounded-full px-3 py-1 text-xs ${reasons.includes(key) ? "bg-pink-500 text-black" : "bg-white/5"}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <p className="mt-4 mb-2 text-sm">Điều em cần</p>
+
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(needMap).map(([key, label]) => (
+                <button
+                  key={key}
+                  onClick={() => {
+                    setNeeds((prev) => (prev.includes(key) ? prev.filter((i) => i !== key) : [...prev, key]));
+                  }}
+                  className={`rounded-full px-3 py-1 text-xs ${needs.includes(key) ? "bg-pink-500 text-black" : "bg-white/5"}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            <textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="Muốn nhắn gì không?"
+              className="mt-4 w-full rounded-xl bg-black/30 p-3"
+            />
+            <button onClick={handleSaveSignal} disabled={!emotion} className="mt-4 w-full rounded-2xl bg-pink-500 py-3 disabled:opacity-30">
+              Lưu tín hiệu
+            </button>
           </div>
         </div>
       )}
