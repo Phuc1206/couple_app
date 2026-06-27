@@ -77,3 +77,30 @@ export const subscribeEmotionSignal = (user: "Phuc" | "Linh", callback: (data: a
     callback(user === "Phuc" ? data.linhSignal || null : data.phucSignal || null);
   });
 };
+
+export const subscribeMySignal = (user: "Phuc" | "Linh", callback: (data: any) => void) => {
+  const ref = doc(db, "app_data", "homepage_shared");
+
+  return onSnapshot(ref, (snap) => {
+    if (!snap.exists()) return callback(null);
+
+    const data = snap.data();
+
+    callback(user === "Phuc" ? data.phucSignal || null : data.linhSignal || null);
+  });
+};
+export const clearEmotionSignal = async (user: "Phuc" | "Linh") => {
+  const ref = doc(db, "app_data", "homepage_shared");
+
+  await setDoc(
+    ref,
+
+    {
+      [user === "Phuc" ? "phucSignal" : "linhSignal"]: null
+    },
+
+    {
+      merge: true
+    }
+  );
+};

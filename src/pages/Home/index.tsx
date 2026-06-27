@@ -6,7 +6,7 @@ import { listenHomeData, updateWidgetText, updateMyMood, updateSpecialDays, IHom
 import { calculateLoveDays, calculateLoveTimeDetailed } from "../../utils/dateUtils";
 import { formatDate, getDiary, saveDiary } from "../../firebase/diary.service";
 import { anniversaryDate } from "../../constant/variable";
-import { saveEmotionSignal, subscribeEmotionSignal } from "../../firebase/emotion.service";
+import { clearEmotionSignal, saveEmotionSignal, subscribeEmotionSignal, subscribeMySignal } from "../../firebase/emotion.service";
 import LoveCounterCard from "./components/LoveCounterCard";
 import MoodCard from "./components/MoodCard";
 import WidgetCard from "./components/WidgetCard";
@@ -49,16 +49,22 @@ export default function Home() {
   const [needs, setNeeds] = useState<string[]>([]);
   const [level, setLevel] = useState<1 | 2 | 3>(2);
   const [message, setMessage] = useState("");
-  const [signal, setSignal] = useState<any>();
+  const [partnerSignal, setPartnerSignal] = useState();
+  const [mySignal, setMySignal] = useState();
   const [isSignalOpen, setIsSignalOpen] = useState(false);
 
   useEffect(() => {
     const unsubscribe = subscribeEmotionSignal(currentUser, (data) => {
-      setSignal(data);
+      console.log(data, "signal");
+      setPartnerSignal(data);
     });
     return unsubscribe;
   }, [currentUser]);
+  useEffect(() => {
+    const unsub = subscribeMySignal(currentUser, setMySignal);
 
+    return unsub;
+  }, [currentUser]);
   // LOGIC TỰ ĐỘNG ĐỔI INTERVAL THEO CHẾ ĐỘ XEM
   useEffect(() => {
     setLoveTime(calculateLoveDays(anniversaryDate));
@@ -167,15 +173,6 @@ export default function Home() {
       updatedAt: ""
     });
 
-    setSignal({
-      emotion,
-      reasons,
-      needs,
-      level,
-      message,
-      updatedAt: new Date().toISOString()
-    });
-
     setEmotion("");
     setReasons([]);
     setNeeds([]);
@@ -190,6 +187,9 @@ export default function Home() {
     } else {
       setViewMode("days");
     }
+  };
+  const handleDeleteEmotion = async () => {
+    await clearEmotionSignal(currentUser);
   };
   return (
     <div className="relative flex h-[500px] w-[340px] items-center justify-center">
@@ -213,7 +213,13 @@ export default function Home() {
         {/* 5. DANH SÁCH CÁC NGÀY ĐẶC BIỆT */}
         <SpecialDaysCard homeData={homeData} setIsModalOpen={setIsModalOpen} onDeleteSpecialDay={handleDeleteSpecialDay} />
         {/* 6. THÔNG BÁO ĐẶC BIỆT */}
-        <LoveSOSCard partner={partner} signal={signal} onOpen={() => setIsSignalOpen(true)} />
+        <LoveSOSCard
+          partner={partner}
+          partnerSignal={partnerSignal}
+          mySignal={mySignal}
+          onOpen={() => setIsSignalOpen(true)}
+          onClear={handleDeleteEmotion}
+        />
 
         {/* 7. WIDGET NHẬT KÝ NHANH HÔM NAY */}
         <DiaryCard
@@ -243,6 +249,8 @@ export default function Home() {
       )}
       {isSignalOpen && (
         <LoveSOSModal
+          reasons={reasons}
+          setReasons={setReasons}
           onSave={handleSaveSignal}
           open={isSignalOpen}
           onClose={() => setIsSignalOpen(false)}

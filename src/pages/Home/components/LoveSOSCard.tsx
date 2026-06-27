@@ -1,24 +1,26 @@
 import { Siren } from "lucide-react";
-import { emotionMap, needMap } from "../../../constant/variable";
+import { emotionMap, needMap, reasonMap } from "../../../constant/variable";
 import { formatSignalTime } from "../../../utils/dateUtils";
 
 interface Props {
   partner: string;
-  signal?: any;
+  mySignal?: any;
+  partnerSignal?: any;
 
   onOpen: () => void;
+  onClear: () => void;
 }
 
-const LoveSOSCard = ({ partner, signal, onOpen }: Props) => {
-  const hasSignal = !!signal;
+const LoveSOSCard = ({ partner, mySignal, partnerSignal, onOpen, onClear }: Props) => {
+  const hasMySignal = !!mySignal;
+  const hasPartnerSignal = !!partnerSignal;
 
   return (
     <div
       className={`relative rounded-3xl border p-4 backdrop-blur-xl transition-all ${
-        hasSignal ? "border-red-500/20 bg-red-500/5" : "border-white/5 bg-white/[0.03]"
-      } `}
+        hasMySignal ? "border-red-500/20 bg-red-500/5" : "border-white/5 bg-white/[0.03]"
+      }`}
     >
-      {/* glow */}
       <div className="absolute -top-10 -right-10 h-32 w-32 rounded-full bg-red-500/10 blur-3xl" />
 
       <div className="flex flex-col items-center">
@@ -29,44 +31,53 @@ const LoveSOSCard = ({ partner, signal, onOpen }: Props) => {
         </div>
 
         <button
-          onClick={() => onOpen()}
+          onClick={hasMySignal ? onClear : onOpen}
           className={`mt-4 flex h-24 w-24 items-center justify-center rounded-full text-xl font-black transition-all ${
-            hasSignal
-              ? `animate-pulse bg-red-500 text-white shadow-[0_0_40px_rgba(239,68,68,0.6)]`
-              : `bg-red-500/90 text-white shadow-[0_0_25px_rgba(239,68,68,0.3)]`
-          } `}
+            hasMySignal
+              ? "bg-emerald-500 text-white shadow-[0_0_40px_rgba(16,185,129,0.6)]"
+              : "bg-red-500 text-white shadow-[0_0_40px_rgba(239,68,68,0.5)]"
+          }`}
         >
-          SOS
+          {hasMySignal ? "OK" : "SOS"}
         </button>
 
-        <p className="mt-3 text-center text-[11px] text-white/40">Nhấn khi bạn muốn phát ra tín hiệu</p>
+        <p className="mt-3 text-center text-[11px] text-white/40">
+          {hasMySignal ? "Nhấn khi bạn đã ổn hơn" : "Nhấn khi bạn muốn phát ra tín hiệu"}
+        </p>
       </div>
 
-      {hasSignal ? (
+      {/* Mình đang SOS */}
+      {hasMySignal && (
         <div className="mt-5 rounded-2xl border border-red-500/10 bg-black/20 p-4">
           <div className="flex items-start gap-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-500/10 text-2xl">
-              {emotionMap[signal.emotion]?.split(" ")[0]}
+              {emotionMap[mySignal.emotion]?.split(" ")[0]}
             </div>
 
             <div className="flex-1">
-              <p className="text-sm font-semibold text-white">🤍 Một mẩu cảm xúc vừa được gửi đến bạn</p>
+              <p className="text-sm font-semibold text-white">🤍 Bạn đang phát tín hiệu SOS</p>
 
-              <p className="mt-1 text-xs text-white/50">
-                {partner === "Phuc" ? "Phúc" : "Linh"} đang cảm thấy {emotionMap[signal.emotion]}
-              </p>
+              <p className="mt-1 text-xs text-white/50">Bạn đang cảm thấy {emotionMap[mySignal.emotion]}</p>
             </div>
           </div>
 
-          {signal.message && (
+          {mySignal.message && (
             <div className="mt-4 rounded-xl bg-white/5 p-3">
-              <p className="text-xs text-white/80 italic">"{signal.message}"</p>
+              <p className="text-xs text-white/80 italic">"{mySignal.message}"</p>
             </div>
           )}
-
-          {signal.needs?.length > 0 && (
+          {mySignal.reasons?.length > 0 && (
             <div className="mt-4 flex flex-wrap gap-2">
-              {signal.needs.map((n: string) => (
+              {mySignal.reasons.map((r: string) => (
+                <span key={r} className="rounded-full bg-white/5 px-3 py-1 text-[11px] text-white/70">
+                  {reasonMap[r]}
+                </span>
+              ))}
+            </div>
+          )}
+          {mySignal.needs?.length > 0 && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {mySignal.needs.map((n: string) => (
                 <span key={n} className="rounded-full bg-pink-500/10 px-3 py-1 text-[11px] text-pink-300">
                   {needMap[n]}
                 </span>
@@ -74,11 +85,64 @@ const LoveSOSCard = ({ partner, signal, onOpen }: Props) => {
             </div>
           )}
 
-          <p className="mt-4 text-[11px] text-white/30">{formatSignalTime(signal.updatedAt)}</p>
+          <p className="mt-4 text-[11px] text-white/30">{formatSignalTime(mySignal.updatedAt)}</p>
         </div>
-      ) : (
+      )}
+
+      {/* Đối phương đang SOS */}
+      {!hasMySignal && hasPartnerSignal && (
+        <div className="mt-5 rounded-2xl border border-pink-500/10 bg-black/20 p-4">
+          <div className="flex items-start gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-pink-500/10 text-2xl">
+              {emotionMap[partnerSignal.emotion]?.split(" ")[0]}
+            </div>
+
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-white">🥺 {partner === "Phuc" ? "Phúc" : "Linh"} đang cần bạn</p>
+
+              <p className="mt-1 text-xs text-white/50">Người ấy đang cảm thấy {emotionMap[partnerSignal.emotion]}</p>
+            </div>
+          </div>
+          {/* Nguyên nhân */}
+
+          {partnerSignal.reasons?.length > 0 && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {partnerSignal.reasons.map((r: string) => (
+                <span key={r} className="rounded-full bg-white/5 px-3 py-1 text-[11px] text-white/70">
+                  {reasonMap[r]}
+                </span>
+              ))}
+            </div>
+          )}
+          {/* Người ấy cần gì */}
+
+          {partnerSignal.needs?.length > 0 && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {partnerSignal.needs.map((n: string) => (
+                <span key={n} className="rounded-full bg-pink-500/10 px-3 py-1 text-[11px] text-pink-300">
+                  {needMap[n]}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Tin nhắn */}
+
+          {partnerSignal.message && (
+            <div className="mt-4 rounded-xl bg-white/5 p-3">
+              <p className="text-xs text-white/80 italic">"{partnerSignal.message}"</p>
+            </div>
+          )}
+
+          <div className="mt-4 flex items-center justify-between">
+            <p className="text-[11px] text-white/30">{formatSignalTime(partnerSignal.updatedAt)}</p>
+          </div>
+        </div>
+      )}
+
+      {!hasMySignal && !hasPartnerSignal && (
         <div className="mt-5 rounded-2xl bg-black/20 p-4">
-          <p className="text-center text-xs text-white/50">🌙 Hôm nay {partner === "Phuc" ? "Phúc" : "Linh"} vẫn ổn</p>
+          <p className="text-center text-xs text-white/50">🌙 Mọi thứ vẫn tuyệt cà là vời</p>
         </div>
       )}
     </div>
