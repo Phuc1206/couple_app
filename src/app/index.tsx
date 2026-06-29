@@ -6,7 +6,7 @@ import { router } from "../routes";
 import { useUserStore } from "../store/userStore"; // Trỏ đúng đường dẫn store của bạn
 
 // Firebase imports
-import { doc, onSnapshot, collection, query, orderBy, limit } from "firebase/firestore";
+import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase/config"; // Trỏ đúng đường dẫn config firebase của bạn
 import { sendLoveNotification } from "../utils/notification";
 
@@ -26,9 +26,6 @@ function App() {
   const prevPartnerMood = useRef<string | null>(null);
   const prevPartnerOnline = useRef<boolean | null>(null);
   const prevPartnerSignal = useRef<string | null>(null);
-
-  const isFirstLoadChat = useRef(true);
-  const lastMessageId = useRef<string | null>(null);
   useEffect(() => {
     // Nếu chưa đăng nhập (currentUser là null hoặc trống), chưa kích hoạt nghe ngầm
     if (!currentUser) return;
@@ -75,13 +72,13 @@ function App() {
         const partnerNameDisplay = partner === "Phuc" ? "Phúc" : "Linh";
         const signal = partner === "Phuc" ? data.phucSignal : data.linhSignal;
 
-        if (signal) {
-          const currentEmotion = signal.emotion || "";
+        if (signal?.updatedAt) {
+          const signalKey = signal.updatedAt;
 
-          if (currentEmotion !== prevPartnerSignal.current) {
+          if (signalKey !== prevPartnerSignal.current) {
             sendLoveNotification(`${partnerNameDisplay} vừa gửi một tín hiệu cảm xúc 🫂`);
 
-            prevPartnerSignal.current = currentEmotion;
+            prevPartnerSignal.current = signalKey;
           }
         }
         // 1. Kiểm tra thay đổi Tâm Trạng (Mood)
@@ -131,37 +128,11 @@ function App() {
       }
     });
 
-    // =================================================================
-    // 3. NGHE NGẦM TIN NHẮN CHAT MỚI
-    // =================================================================
-    // Query lấy ra đúng 1 tin nhắn mới nhất trong subcollection messages của phòng đôi
-    const messagesRef = collection(db, "chats");
-    const chatQuery = query(messagesRef, orderBy("timestamp", "desc"), limit(1));
-
-    const unsubscribeChat = onSnapshot(chatQuery, (snapshot) => {
-      if (snapshot.empty) return;
-
-      const lastDoc = snapshot.docs[0];
-      const lastMsgData = lastDoc.data();
-
-      // Nạp mốc ID tin nhắn cũ nhất lúc vừa bật app
-      if (isFirstLoadChat.current) {
-        lastMessageId.current = lastDoc.id;
-        isFirstLoadChat.current = false;
-        return;
-      }
-
-      // Nếu tin nhắn mới về có ID khác ID cũ, và KHÔNG phải do chính mình gửi
-      if (lastDoc.id !== lastMessageId.current && lastMsgData.sender !== currentUser) {
-        sendLoveNotification(`${partner === "Phuc" ? "Phúc" : "Linh"} vừa nhắn: "${lastMsgData.content || "📷 [Hình ảnh/Sticker]"}"`);
-        lastMessageId.current = lastDoc.id; // Cập nhật mốc ID mới
-      }
-    });
     // Hủy đăng ký tất cả radar khi User Logout hoặc tắt app
     return () => {
       unsubscribeHome();
       unsubscribeDiary();
-      unsubscribeChat();
+      // unsubscribeChat();
     };
   }, [currentUser, partner]);
 

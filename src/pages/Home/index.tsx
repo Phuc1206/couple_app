@@ -170,7 +170,7 @@ export default function Home() {
       needs,
       level,
       message,
-      updatedAt: ""
+      updatedAt: new Date().toISOString()
     });
 
     setEmotion("");

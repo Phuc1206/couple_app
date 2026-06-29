@@ -9,6 +9,7 @@ import Error from "../pages/Error";
 import Todo from "../pages/Todo";
 import Profile from "../pages/Profile";
 import Diary from "../pages/Diary";
+import Sos from "../pages/Sos";
 
 export const router = createHashRouter([
   {
@@ -36,6 +37,10 @@ export const router = createHashRouter([
       {
         path: "todo",
         element: <Todo />
+      },
+      {
+        path: "sos",
+        element: <Sos />
       },
       {
         path: "profile",

@@ -1,4 +1,4 @@
-import { Home, MessageCircle, User, ListTodo, NotepadText } from "lucide-react";
+import { Home, User, ListTodo, NotepadText, Siren } from "lucide-react";
 
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -13,10 +13,15 @@ const items = [
     label: "DIARY",
     path: "/diary"
   },
+  // {
+  //   icon: MessageCircle,
+  //   label: "CHAT",
+  //   path: "/chat"
+  // },
   {
-    icon: MessageCircle,
-    label: "CHAT",
-    path: "/chat"
+    icon: Siren,
+    label: "SOS",
+    path: "/sos"
   },
   {
     icon: ListTodo,

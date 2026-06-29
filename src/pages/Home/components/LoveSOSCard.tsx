@@ -90,7 +90,7 @@ const LoveSOSCard = ({ partner, mySignal, partnerSignal, onOpen, onClear }: Prop
       )}
 
       {/* Đối phương đang SOS */}
-      {!hasMySignal && hasPartnerSignal && (
+      {hasPartnerSignal && (
         <div className="mt-5 rounded-2xl border border-pink-500/10 bg-black/20 p-4">
           <div className="flex items-start gap-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-pink-500/10 text-2xl">

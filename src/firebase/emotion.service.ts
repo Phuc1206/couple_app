@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { db } from "./config";
-import { doc, getDoc, onSnapshot, setDoc } from "firebase/firestore";
+import { doc, onSnapshot, setDoc } from "firebase/firestore";
 
 export interface IEmotionSignal {
   emotion: string;
@@ -34,9 +34,7 @@ export const saveEmotionSignal = async (
 
     {
       [user === "Phuc" ? "phucSignal" : "linhSignal"]: {
-        ...data,
-
-        updatedAt: new Date().toISOString()
+        ...data
       }
     },
 
@@ -46,22 +44,19 @@ export const saveEmotionSignal = async (
   );
 };
 
-export const getEmotionSignal = async (user: "Phuc" | "Linh") => {
-  const ref = doc(
-    db,
+export const listenEmotionSignal = (callback: (data: any) => void) => {
+  const ref = doc(db, "app_data", "homepage_shared");
 
-    "app_data",
+  return onSnapshot(ref, (snap) => {
+    const data = snap.data();
 
-    "homepage_shared"
-  );
+    const result = {
+      phucSignal: data?.phucSignal ?? null,
+      linhSignal: data?.linhSignal ?? null
+    };
 
-  const snap = await getDoc(ref);
-
-  if (!snap.exists()) return null;
-
-  const data = snap.data();
-
-  return user === "Phuc" ? data.phucSignal || null : data.linhSignal || null;
+    callback({ ...result }); // 👈 force new reference
+  });
 };
 export const subscribeEmotionSignal = (user: "Phuc" | "Linh", callback: (data: any) => void) => {
   const ref = doc(db, "app_data", "homepage_shared");
